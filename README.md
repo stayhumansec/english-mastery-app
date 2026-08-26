@@ -49,11 +49,19 @@ backend, no accounts, and no cloud sync.
 - **Reminders** — optional browser notifications for scheduled study times
   and an end-of-day nudge if nothing has been logged yet.
 - Installable **PWA** that works offline.
+- A light, colorful, Duolingo-style design system — bright per-feature/
+  per-level colors, rounded cards and pill buttons, and springy Framer
+  Motion animation throughout (page transitions, count-up stats, a real
+  3D flashcard flip, confetti bursts on milestones), with a
+  `prefers-reduced-motion` fallback.
 
 ## Tech stack
 
 - [Vite](https://vite.dev) + React 19 + TypeScript
 - [Tailwind CSS v4](https://tailwindcss.com) (via `@tailwindcss/vite`)
+- [Framer Motion](https://motion.dev) for animation (page transitions,
+  count-up numbers, spring-animated progress bars, the flashcard flip,
+  confetti, toasts, modals — see `src/components/motion/`)
 - [Dexie.js](https://dexie.org) over IndexedDB for storage
 - [react-big-calendar](https://github.com/jquense/react-big-calendar) +
   `date-fns` for the calendar view
@@ -61,6 +69,8 @@ backend, no accounts, and no cloud sync.
 - [vite-plugin-pwa](https://vite-pwa-org.netlify.app) for the service worker
   and installable manifest
 - [lucide-react](https://lucide.dev) for icons
+- [Nunito](https://fonts.google.com/specimen/Nunito) (Google Fonts) for the
+  rounded, friendly typeface
 
 ## Getting started
 
