@@ -32,6 +32,7 @@ export default function DrillsPage() {
   const [index, setIndex] = useState(0)
   const [sentence, setSentence] = useState('')
   const [burst, setBurst] = useState(0)
+  const [feedbackFor, setFeedbackFor] = useState<QueueItem | null>(null)
   const { showToast } = useToast()
   const color = FEATURE_COLORS.drills
 
@@ -86,6 +87,13 @@ export default function DrillsPage() {
         createdAt: Date.now(),
       })
     }
+    // Show a model example before advancing — the "feedback" a teacher
+    // would give even without live grading.
+    setFeedbackFor(current)
+  }
+
+  const goNext = () => {
+    setFeedbackFor(null)
     setSentence('')
     if (index + 1 >= queue.length) {
       setSessionStarted(false)
@@ -159,17 +167,35 @@ export default function DrillsPage() {
             onChange={(e) => setSentence(e.target.value)}
             placeholder="Write your sentence using the pattern above…"
             rows={3}
-            className="w-full rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+            disabled={!!feedbackFor}
+            className="w-full rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm disabled:opacity-70"
           />
 
-          <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => submit('unsure')} className="btn border-2 border-amber-400 py-2 text-sm font-bold text-amber-600" style={{ background: 'transparent', boxShadow: 'none' }}>
-              Save — unsure
-            </button>
-            <button onClick={() => submit('confident')} className="btn py-2 text-sm text-white" style={{ background: 'var(--accent)' }}>
-              Save — confident
-            </button>
-          </div>
+          {!feedbackFor ? (
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => submit('unsure')} className="btn border-2 border-amber-400 py-2 text-sm font-bold text-amber-600" style={{ background: 'transparent', boxShadow: 'none' }}>
+                Save — unsure
+              </button>
+              <button onClick={() => submit('confident')} className="btn py-2 text-sm text-white" style={{ background: 'var(--accent)' }}>
+                Save — confident
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {feedbackFor.pattern?.examples[0] && (
+                <div className="card space-y-1 p-3" style={{ background: 'var(--blue-soft)' }}>
+                  <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--blue)' }}>
+                    Model example using this pattern
+                  </p>
+                  <p className="text-sm"><PatternText segments={feedbackFor.pattern.examples[0].segments} /></p>
+                  <p className="text-xs text-[var(--text-muted)]">Compare it with your sentence — what's different?</p>
+                </div>
+              )}
+              <button onClick={goNext} className="btn w-full py-2 text-sm text-white" style={{ background: color }}>
+                Next sentence
+              </button>
+            </div>
+          )}
         </div>
       )}
 

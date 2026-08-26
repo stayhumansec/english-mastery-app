@@ -120,6 +120,10 @@ function StudySession({
   const { showToast } = useToast()
   const card = queue[index]
   const color = card ? DECK_COLORS[card.deck] : 'var(--accent)'
+  const linkedPattern = useLiveQuery(
+    () => (card?.patternId ? db.patterns.get(card.patternId) : undefined),
+    [card?.patternId],
+  )
 
   const grade = async (g: ReviewGrade) => {
     if (!card) return
@@ -172,12 +176,18 @@ function StudySession({
             <span className="text-xs text-[var(--text-muted)]">Tap to reveal</span>
           </div>
           <div
-            className="card absolute inset-0 flex flex-col items-center justify-center gap-2 p-6"
+            className="card absolute inset-0 flex flex-col items-center justify-center gap-2 overflow-y-auto p-6"
             style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)', borderTop: `6px solid ${color}` }}
           >
             <p className="text-lg font-bold">{card.back}</p>
             {card.example && <p className="text-sm italic text-[var(--text-muted)]">"{card.example}"</p>}
             {card.audioNote && <p className="text-xs text-[var(--text-muted)]">🔊 {card.audioNote}</p>}
+            {linkedPattern && (
+              <div className="mt-1 rounded-xl p-2 text-xs" style={{ background: 'var(--purple-soft)' }}>
+                <span className="font-bold" style={{ color: 'var(--purple)' }}>Why this works: </span>
+                {linkedPattern.ruleExplanation}
+              </div>
+            )}
           </div>
         </motion.button>
       </div>
