@@ -19,10 +19,33 @@ backend, no accounts, and no cloud sync.
   Verbs, Professional/Work English, Pronunciation Minimal Pairs, Sentence
   Patterns, Collocations) with a simple SM-2 spaced-repetition scheduler and
   again/hard/good/easy review grading. Add, edit and delete your own cards.
-- **Accent & Pronunciation Log** — a lightweight structured log (date,
-  activity, 1–5 self-rating, notes) for shadowing/pronunciation practice.
-- **Dashboard** — today's scheduled sessions, flashcards due, current streak,
-  overall CEFR progress, and quick-start shortcuts.
+- **Comprehensible Input Log** — log what you read/listened to (title,
+  type, difficulty, duration) with 2–3 new words/phrases per entry and a
+  one-click "send to flashcards" so real input feeds spaced repetition.
+  Tracks weekly input minutes and a separate weekly streak.
+- **Writing Journal** — a daily free-write with word count and streak
+  tracking, optionally tagged with the grammar pattern or vocabulary you
+  deliberately tried to use. Output practice, not grammar recognition.
+- **Speaking & Accent Log** — a leveled scenario-prompt generator
+  (everyday/professional/storytelling/debate) with a simple practice timer
+  (no audio recorded), self-rating, notes, and category coverage so gaps in
+  speaking practice are visible.
+- **Sentence Production Drills** — short daily sessions (4 sentences):
+  pairs a grammar pattern with a realistic scenario and asks for a
+  free-written sentence. Attempts are marked confident/unsure; unsure ones
+  resurface in later sessions.
+- **Pattern Library** — a browsable, searchable, filterable library of
+  grammar patterns (A1–B2) with color-coded structure templates and
+  highlighted example sentences (subject/verb/object, consistent across all
+  patterns), a common-mistake note, a contrast example, and a "Spot the
+  Pattern" recognition warm-up with immediate visual feedback. Links to
+  Grammar-in-Context flashcards and focused Sentence Drills sessions.
+- **Weekly Practical Skill Focus** — rotates through your in-progress
+  roadmap modules to spotlight one practical focus per week, with related
+  Pattern Library entries surfaced on the dashboard.
+- **Dashboard** — a daily practice checklist (input log, journal, sentence
+  drill, today's speaking prompt), flashcards due, today's scheduled
+  sessions, current streak, and overall CEFR progress.
 - **Reminders** — optional browser notifications for scheduled study times
   and an end-of-day nudge if nothing has been logged yet.
 - Installable **PWA** that works offline.
@@ -49,11 +72,12 @@ npm run preview   # preview the production build locally
 npm run lint      # run oxlint
 ```
 
-The app seeds itself on first run with the full A1–C2 roadmap skeleton and
-~18 starter flashcards across all deck categories, so it isn't empty on
-first launch. All data lives in IndexedDB (`english-mastery-db`) in your
-browser — clearing site data will wipe your progress, so back up anything
-irreplaceable (there's currently no export/import; see Roadmap below).
+The app seeds itself on first run with the full A1–C2 roadmap skeleton,
+~21 starter flashcards, 12 Pattern Library entries (A1–B2) and ~20 leveled
+speaking scenario prompts, so it isn't empty on first launch. All data
+lives in IndexedDB (`english-mastery-db`) in your browser — clearing site
+data will wipe your progress, so back up anything irreplaceable (there's
+currently no export/import; see Roadmap below).
 
 ## Design notes & trade-offs
 
@@ -77,6 +101,18 @@ irreplaceable (there's currently no export/import; see Roadmap below).
 - **react-big-calendar** was used instead of a hand-built calendar grid — it
   handles month/week/day views, event layout and slot selection out of the
   box, which would otherwise be a significant chunk of throwaway UI code.
+- **Patterns as structured, tagged data, not markdown.** Each pattern's
+  structure template and example sentences are arrays of `{ text, role }`
+  segments (`src/lib/types.ts` — `PatternSegment`), not prose to parse at
+  render time. That's what lets the same three colors (subject/verb/object)
+  render consistently everywhere a pattern shows up, and lets "Spot the
+  Pattern" grade clicks against real target tokens instead of string
+  matching.
+- **Weekly focus links to patterns via keyword heuristic, not a foreign
+  key.** Roadmap modules and Pattern Library entries are independent, editable
+  lists; `src/lib/weeklyFocus.ts` matches a module's title against pattern
+  categories (e.g. "Conditional" → Conditionals) well enough to surface
+  relevant patterns without forcing a rigid 1:1 mapping between the two.
 
 ## Project structure
 
@@ -91,7 +127,11 @@ src/
     calendar/       # calendar + recurrence expansion
     timer/         # study timer + session history
     flashcards/    # decks, study session, card CRUD
-    accent/        # accent/pronunciation log
+    input/         # comprehensible input log
+    journal/       # writing journal
+    drills/        # sentence production drills
+    patterns/      # pattern library, explorer, spot-the-pattern drill
+    accent/        # speaking/accent log + scenario prompts
     settings/      # reminder settings + the reminder-polling hook
 ```
 
