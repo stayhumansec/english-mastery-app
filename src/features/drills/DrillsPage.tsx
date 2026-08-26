@@ -2,10 +2,14 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
+import { motion } from 'framer-motion'
 import { db } from '../../lib/db'
 import { todayIso } from '../../lib/date'
 import PatternText from '../../components/PatternText'
-import type { DrillAttempt, DrillConfidence, Pattern } from '../../lib/types'
+import Confetti from '../../components/motion/Confetti'
+import { useToast } from '../../components/motion/ToastProvider'
+import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
+import { FEATURE_COLORS, type DrillAttempt, type DrillConfidence, type Pattern } from '../../lib/types'
 
 const SESSION_SIZE = 4
 
@@ -27,6 +31,9 @@ export default function DrillsPage() {
   const [queue, setQueue] = useState<QueueItem[]>([])
   const [index, setIndex] = useState(0)
   const [sentence, setSentence] = useState('')
+  const [burst, setBurst] = useState(0)
+  const { showToast } = useToast()
+  const color = FEATURE_COLORS.drills
 
   const focusPattern = patterns?.find((p) => p.id === focusPatternId)
 
@@ -83,6 +90,8 @@ export default function DrillsPage() {
     if (index + 1 >= queue.length) {
       setSessionStarted(false)
       setQueue([])
+      setBurst((b) => b + 1)
+      showToast('Drill session complete!', '✨')
     } else {
       setIndex((i) => i + 1)
     }
@@ -93,24 +102,25 @@ export default function DrillsPage() {
   const unsureCount = useMemo(() => attempts?.filter((a) => a.confidence === 'unsure').length ?? 0, [attempts])
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Sentence Production Drills</h1>
-        <p className="text-sm text-[var(--text-muted)]">
+    <motion.div className="relative space-y-6" variants={staggerContainer} initial="hidden" animate="show">
+      <Confetti trigger={burst} />
+      <motion.div variants={fadeUpItem}>
+        <h1 className="text-2xl font-black" style={{ color }}>Sentence Production Drills ✨</h1>
+        <p className="text-sm font-medium text-[var(--text-muted)]">
           Write your own sentence — free production, not fill-in-the-blank. 3-5 per session.
         </p>
-      </div>
+      </motion.div>
 
       {focusPattern && !sessionStarted && (
-        <div className="card p-3 text-sm">
-          Focused on <span className="font-medium">{focusPattern.name}</span> —{' '}
+        <motion.div variants={fadeUpItem} className="card p-3 text-sm">
+          Focused on <span className="font-bold">{focusPattern.name}</span> —{' '}
           <PatternText segments={focusPattern.structureTemplate} />
-        </div>
+        </motion.div>
       )}
 
       {!sessionStarted ? (
-        <div className="card mx-auto max-w-sm space-y-3 p-6 text-center">
-          <p className="text-sm text-[var(--text-muted)]">
+        <motion.div variants={fadeUpItem} className="card mx-auto max-w-sm space-y-3 p-6 text-center">
+          <p className="text-sm font-medium text-[var(--text-muted)]">
             {unsureCount > 0 && !focusPatternId
               ? `${unsureCount} sentence(s) marked "unsure" will resurface in this session.`
               : 'Ready for a quick drill session?'}
@@ -118,11 +128,12 @@ export default function DrillsPage() {
           <button
             onClick={buildQueue}
             disabled={!patterns?.length || !scenarioPrompts?.length}
-            className="w-full rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+            className="btn w-full py-2 text-sm text-white disabled:opacity-40"
+            style={{ background: color }}
           >
             Start session ({SESSION_SIZE} sentences)
           </button>
-        </div>
+        </motion.div>
       ) : (
         <div className="mx-auto max-w-lg space-y-4">
           <div className="flex justify-between text-xs text-[var(--text-muted)]">
@@ -148,23 +159,23 @@ export default function DrillsPage() {
             onChange={(e) => setSentence(e.target.value)}
             placeholder="Write your sentence using the pattern above…"
             rows={3}
-            className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+            className="w-full rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
           />
 
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => submit('unsure')} className="rounded-lg border border-amber-400 px-4 py-2 text-sm font-medium text-amber-600">
+            <button onClick={() => submit('unsure')} className="btn border-2 border-amber-400 py-2 text-sm font-bold text-amber-600" style={{ background: 'transparent', boxShadow: 'none' }}>
               Save — unsure
             </button>
-            <button onClick={() => submit('confident')} className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white">
+            <button onClick={() => submit('confident')} className="btn py-2 text-sm text-white" style={{ background: 'var(--accent)' }}>
               Save — confident
             </button>
           </div>
         </div>
       )}
 
-      <section className="space-y-2">
-        <h2 className="font-medium">Past attempts</h2>
-        {attempts?.length === 0 && <p className="text-sm text-[var(--text-muted)]">No attempts yet.</p>}
+      <motion.section variants={fadeUpItem} className="space-y-2">
+        <h2 className="font-bold">Past attempts</h2>
+        {attempts?.length === 0 && <p className="text-sm text-[var(--text-muted)]">✨ No attempts yet — start a session above!</p>}
         {attempts?.map((a) => (
           <div key={a.id} className="card space-y-1 p-3 text-sm">
             <div className="flex items-start justify-between gap-2">
@@ -181,13 +192,13 @@ export default function DrillsPage() {
             </div>
             <p>{a.sentence}</p>
             {a.confidence === 'unsure' && (
-              <button onClick={() => markConfident(a)} className="text-xs text-[var(--accent)] hover:underline">
+              <button onClick={() => markConfident(a)} className="text-xs font-bold hover:underline" style={{ color }}>
                 Mark confident now
               </button>
             )}
           </div>
         ))}
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   )
 }

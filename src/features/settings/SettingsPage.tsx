@@ -1,8 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import { db } from '../../lib/db'
 import { notificationsSupported, requestNotificationPermission } from '../../lib/notifications'
-import type { AppSettings } from '../../lib/types'
+import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
+import { FEATURE_COLORS, type AppSettings } from '../../lib/types'
 
 export default function SettingsPage() {
   const settings = useLiveQuery(() => db.settings.get('app'), [])
@@ -30,22 +32,21 @@ export default function SettingsPage() {
     update({ reminderTimes: settings.reminderTimes.filter((t) => t !== time) })
   }
 
-  return (
-    <div className="max-w-xl space-y-6">
-      <h1 className="text-xl font-semibold">Settings</h1>
+  const color = FEATURE_COLORS.settings
 
-      <section className="card space-y-3 p-4">
-        <h2 className="font-medium">Notifications</h2>
+  return (
+    <motion.div className="max-w-xl space-y-6" variants={staggerContainer} initial="hidden" animate="show">
+      <motion.h1 variants={fadeUpItem} className="text-2xl font-black" style={{ color }}>Settings ⚙️</motion.h1>
+
+      <motion.section variants={fadeUpItem} className="card space-y-3 p-4">
+        <h2 className="font-bold">Notifications</h2>
         {permission === 'unsupported' && (
           <p className="text-sm text-[var(--text-muted)]">
             This browser doesn't support the Notification API.
           </p>
         )}
         {permission !== 'unsupported' && permission !== 'granted' && (
-          <button
-            onClick={enableNotifications}
-            className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm text-white"
-          >
+          <button onClick={enableNotifications} className="btn btn-primary px-3 py-1.5 text-sm">
             Enable browser notifications
           </button>
         )}
@@ -81,9 +82,9 @@ export default function SettingsPage() {
                   type="time"
                   value={newTime}
                   onChange={(e) => setNewTime(e.target.value)}
-                  className="rounded-lg border border-[var(--border)] bg-transparent px-2 py-1 text-sm"
+                  className="rounded-xl border-2 border-[var(--border)] bg-transparent px-2 py-1 text-sm"
                 />
-                <button onClick={addTime} className="rounded-lg border border-[var(--border)] px-3 py-1 text-sm">
+                <button onClick={addTime} className="btn btn-secondary px-3 py-1 text-sm">
                   Add time
                 </button>
               </div>
@@ -101,7 +102,7 @@ export default function SettingsPage() {
               type="time"
               value={settings.inactivityReminderTime}
               onChange={(e) => update({ inactivityReminderTime: e.target.value })}
-              className="rounded-lg border border-[var(--border)] bg-transparent px-2 py-1 text-sm"
+              className="rounded-xl border-2 border-[var(--border)] bg-transparent px-2 py-1 text-sm"
             />
 
             <label className="flex items-center justify-between text-sm">
@@ -111,15 +112,15 @@ export default function SettingsPage() {
                 min={1}
                 value={settings.snoozeMinutes}
                 onChange={(e) => update({ snoozeMinutes: Number(e.target.value) })}
-                className="w-20 rounded-lg border border-[var(--border)] bg-transparent px-2 py-1 text-sm"
+                className="w-20 rounded-xl border-2 border-[var(--border)] bg-transparent px-2 py-1 text-sm"
               />
             </label>
           </>
         )}
-      </section>
+      </motion.section>
 
-      <section className="card space-y-3 p-4">
-        <h2 className="font-medium">Timer defaults</h2>
+      <motion.section variants={fadeUpItem} className="card space-y-3 p-4">
+        <h2 className="font-bold">Timer defaults</h2>
         <label className="flex items-center justify-between text-sm">
           <span>Enable break reminders</span>
           <input
@@ -135,7 +136,7 @@ export default function SettingsPage() {
             min={1}
             value={settings.breakWorkMinutes}
             onChange={(e) => update({ breakWorkMinutes: Number(e.target.value) })}
-            className="w-20 rounded-lg border border-[var(--border)] bg-transparent px-2 py-1 text-sm"
+            className="w-20 rounded-xl border-2 border-[var(--border)] bg-transparent px-2 py-1 text-sm"
           />
         </label>
         <label className="flex items-center justify-between text-sm">
@@ -145,16 +146,16 @@ export default function SettingsPage() {
             min={1}
             value={settings.breakDurationMinutes}
             onChange={(e) => update({ breakDurationMinutes: Number(e.target.value) })}
-            className="w-20 rounded-lg border border-[var(--border)] bg-transparent px-2 py-1 text-sm"
+            className="w-20 rounded-xl border-2 border-[var(--border)] bg-transparent px-2 py-1 text-sm"
           />
         </label>
-      </section>
+      </motion.section>
 
-      <p className="text-xs text-[var(--text-muted)]">
+      <motion.p variants={fadeUpItem} className="text-xs text-[var(--text-muted)]">
         Notifications only fire while this app is open in a tab or installed window — see the
         README for platform limitations (iOS Safari in particular restricts background
         notifications for web apps).
-      </p>
-    </div>
+      </motion.p>
+    </motion.div>
   )
 }

@@ -1,11 +1,14 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { v4 as uuid } from 'uuid'
+import { motion } from 'framer-motion'
 import { db } from '../../lib/db'
 import { newCardScheduleDefaults } from '../../lib/sm2'
 import { startOfWeekIso, todayIso } from '../../lib/date'
 import { computeWeeklyStreak } from '../../lib/streak'
-import { DECKS, type CefrLevel, type DeckName, type InputDifficulty, type InputLogItem, type InputType } from '../../lib/types'
+import { useToast } from '../../components/motion/ToastProvider'
+import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
+import { DECKS, FEATURE_COLORS, type CefrLevel, type DeckName, type InputDifficulty, type InputLogItem, type InputType } from '../../lib/types'
 import { CEFR_LEVELS } from '../../lib/types'
 import { Plus, Trash2 } from 'lucide-react'
 
@@ -24,6 +27,8 @@ const DIFFICULTY_LABEL: Record<InputDifficulty, string> = {
 
 export default function InputLogPage() {
   const entries = useLiveQuery(() => db.inputLogs.orderBy('date').reverse().toArray(), [])
+  const { showToast } = useToast()
+  const color = FEATURE_COLORS.input
 
   const [date, setDate] = useState(todayIso())
   const [title, setTitle] = useState('')
@@ -68,40 +73,41 @@ export default function InputLogPage() {
     setTitle('')
     setDurationMinutes(15)
     setItems([{ text: '', note: '' }])
+    showToast('Input session logged!', '📚')
   }
 
   const remove = (id: string) => db.inputLogs.delete(id)
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Comprehensible Input Log</h1>
-        <p className="text-sm text-[var(--text-muted)]">Reading & listening, slightly above your level.</p>
-      </div>
+    <motion.div className="space-y-6" variants={staggerContainer} initial="hidden" animate="show">
+      <motion.div variants={fadeUpItem}>
+        <h1 className="text-2xl font-black" style={{ color }}>Comprehensible Input Log 📚</h1>
+        <p className="text-sm font-medium text-[var(--text-muted)]">Reading & listening, slightly above your level.</p>
+      </motion.div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="card p-4 text-center">
-          <p className="text-3xl font-semibold text-[var(--accent)]">{stats.weekMinutes}</p>
-          <p className="text-xs text-[var(--text-muted)]">minutes this week</p>
+      <motion.div variants={fadeUpItem} className="grid gap-3 sm:grid-cols-2">
+        <div className="card p-4 text-center" style={{ background: 'var(--teal-soft)' }}>
+          <p className="text-3xl font-black" style={{ color }}>{stats.weekMinutes}</p>
+          <p className="text-xs font-bold" style={{ color }}>minutes this week</p>
         </div>
-        <div className="card p-4 text-center">
-          <p className="text-3xl font-semibold text-[var(--accent)]">{stats.streak}</p>
-          <p className="text-xs text-[var(--text-muted)]">week streak</p>
+        <div className="card p-4 text-center" style={{ background: 'var(--teal-soft)' }}>
+          <p className="text-3xl font-black" style={{ color }}>{stats.streak}</p>
+          <p className="text-xs font-bold" style={{ color }}>week streak</p>
         </div>
-      </div>
+      </motion.div>
 
-      <section className="card mx-auto max-w-lg space-y-3 p-4">
+      <motion.section variants={fadeUpItem} className="card mx-auto max-w-lg space-y-3 p-4">
         <div className="flex gap-2">
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+            className="rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
           />
           <select
             value={type}
             onChange={(e) => setType(e.target.value as InputType)}
-            className="flex-1 rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+            className="flex-1 rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
           >
             {Object.entries(TYPE_LABEL).map(([v, l]) => (
               <option key={v} value={v}>{l}</option>
@@ -112,13 +118,13 @@ export default function InputLogPage() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Title / source, e.g. 'The Daily podcast — episode on...'"
-          className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+          className="w-full rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
         />
         <div className="flex gap-2">
           <select
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value as InputDifficulty)}
-            className="flex-1 rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+            className="flex-1 rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
           >
             {Object.entries(DIFFICULTY_LABEL).map(([v, l]) => (
               <option key={v} value={v}>{l}</option>
@@ -131,7 +137,7 @@ export default function InputLogPage() {
               min={1}
               value={durationMinutes}
               onChange={(e) => setDurationMinutes(Number(e.target.value))}
-              className="w-20 rounded-lg border border-[var(--border)] bg-transparent px-2 py-1 text-sm"
+              className="w-20 rounded-xl border-2 border-[var(--border)] bg-transparent px-2 py-1 text-sm"
             />
           </label>
         </div>
@@ -145,13 +151,13 @@ export default function InputLogPage() {
                   value={it.text}
                   onChange={(e) => updateItem(i, { text: e.target.value })}
                   placeholder="word or phrase"
-                  className="flex-1 rounded-lg border border-[var(--border)] bg-transparent px-2 py-1.5 text-sm"
+                  className="flex-1 rounded-xl border-2 border-[var(--border)] bg-transparent px-2 py-1.5 text-sm"
                 />
                 <input
                   value={it.note ?? ''}
                   onChange={(e) => updateItem(i, { note: e.target.value })}
                   placeholder="meaning (optional)"
-                  className="flex-1 rounded-lg border border-[var(--border)] bg-transparent px-2 py-1.5 text-sm"
+                  className="flex-1 rounded-xl border-2 border-[var(--border)] bg-transparent px-2 py-1.5 text-sm"
                 />
                 <button onClick={() => removeItemRow(i)} className="text-[var(--text-muted)] hover:text-red-500">
                   <Trash2 size={16} />
@@ -159,19 +165,21 @@ export default function InputLogPage() {
               </div>
             ))}
           </div>
-          <button onClick={addItemRow} className="mt-2 flex items-center gap-1 text-xs text-[var(--accent)]">
+          <button onClick={addItemRow} className="mt-2 flex items-center gap-1 text-xs font-bold" style={{ color }}>
             <Plus size={14} /> Add another
           </button>
         </div>
 
-        <button onClick={submit} className="w-full rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white">
+        <button onClick={submit} className="btn w-full py-2 text-sm text-white" style={{ background: color }}>
           Log input session
         </button>
-      </section>
+      </motion.section>
 
-      <section className="space-y-2">
-        <h2 className="font-medium">History</h2>
-        {entries?.length === 0 && <p className="text-sm text-[var(--text-muted)]">No entries yet.</p>}
+      <motion.section variants={fadeUpItem} className="space-y-2">
+        <h2 className="font-bold">History</h2>
+        {entries?.length === 0 && (
+          <p className="text-sm text-[var(--text-muted)]">🌱 No entries yet — log your first reading or listening session above!</p>
+        )}
         {entries?.map((entry) => (
           <div key={entry.id} className="card space-y-2 p-3">
             <div className="flex items-start justify-between">
@@ -194,8 +202,8 @@ export default function InputLogPage() {
             )}
           </div>
         ))}
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   )
 }
 
@@ -225,7 +233,7 @@ function InputItemRow({ entryId, index, item }: { entryId: string; index: number
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border)] px-2 py-1.5 text-sm">
+    <div className="flex flex-wrap items-center gap-2 rounded-xl border-2 border-[var(--border)] px-2 py-1.5 text-sm">
       <span className="font-medium">{item.text}</span>
       {item.note && <span className="text-[var(--text-muted)]">— {item.note}</span>}
       <div className="ml-auto flex items-center gap-2">
@@ -233,20 +241,20 @@ function InputItemRow({ entryId, index, item }: { entryId: string; index: number
           <span className="text-xs text-[var(--text-muted)]">✓ in flashcards</span>
         ) : picking ? (
           <>
-            <select value={deck} onChange={(e) => setDeck(e.target.value as DeckName)} className="rounded border border-[var(--border)] bg-transparent px-1 py-0.5 text-xs">
+            <select value={deck} onChange={(e) => setDeck(e.target.value as DeckName)} className="rounded-lg border-2 border-[var(--border)] bg-transparent px-1 py-0.5 text-xs">
               {DECKS.map((d) => (
                 <option key={d} value={d}>{d}</option>
               ))}
             </select>
-            <select value={level} onChange={(e) => setLevel(e.target.value as CefrLevel)} className="rounded border border-[var(--border)] bg-transparent px-1 py-0.5 text-xs">
+            <select value={level} onChange={(e) => setLevel(e.target.value as CefrLevel)} className="rounded-lg border-2 border-[var(--border)] bg-transparent px-1 py-0.5 text-xs">
               {CEFR_LEVELS.map((l) => (
                 <option key={l} value={l}>{l}</option>
               ))}
             </select>
-            <button onClick={sendToFlashcard} className="rounded bg-[var(--accent)] px-2 py-0.5 text-xs text-white">Add</button>
+            <button onClick={sendToFlashcard} className="btn px-2 py-0.5 text-xs text-white" style={{ background: FEATURE_COLORS.input }}>Add</button>
           </>
         ) : (
-          <button onClick={() => setPicking(true)} className="text-xs text-[var(--accent)] hover:underline">
+          <button onClick={() => setPicking(true)} className="text-xs font-bold hover:underline" style={{ color: FEATURE_COLORS.input }}>
             Send to flashcards
           </button>
         )}

@@ -1,10 +1,14 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 import { v4 as uuid } from 'uuid'
+import { motion } from 'framer-motion'
 import { db } from '../../lib/db'
 import { todayIso } from '../../lib/date'
 import { fireNotification } from '../../lib/notifications'
-import { ACTIVITY_CATEGORIES, CATEGORY_COLORS, type ActivityCategory } from '../../lib/types'
+import Confetti from '../../components/motion/Confetti'
+import { useToast } from '../../components/motion/ToastProvider'
+import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
+import { ACTIVITY_CATEGORIES, CATEGORY_COLORS, FEATURE_COLORS, type ActivityCategory } from '../../lib/types'
 import { Pause, Play, RotateCcw } from 'lucide-react'
 
 type Phase = 'idle' | 'running' | 'paused' | 'break'
@@ -19,6 +23,7 @@ function formatTime(totalSeconds: number): string {
 
 export default function TimerPage() {
   const settings = useLiveQuery(() => db.settings.get('app'), [])
+  const { showToast } = useToast()
   const [category, setCategory] = useState<ActivityCategory>('Vocabulary')
   const [label, setLabel] = useState('')
   const [hours, setHours] = useState(0)
@@ -26,6 +31,7 @@ export default function TimerPage() {
   const [phase, setPhase] = useState<Phase>('idle')
   const [secondsLeft, setSecondsLeft] = useState(0)
   const [totalSeconds, setTotalSeconds] = useState(0)
+  const [burst, setBurst] = useState(0)
   const startedAtRef = useRef<number>(0)
   const intervalRef = useRef<number | null>(null)
 
@@ -90,6 +96,8 @@ export default function TimerPage() {
         createdAt: Date.now(),
       })
       fireNotification('Session complete', `${label || category} — ${durationMinutes} min logged.`)
+      setBurst((b) => b + 1)
+      showToast(`${durationMinutes} min logged!`, '⏱️')
 
       if (settings?.breakEnabled) {
         const breakTotal = settings.breakDurationMinutes * 60
@@ -106,18 +114,22 @@ export default function TimerPage() {
   }
 
   const progressPct = totalSeconds > 0 ? ((totalSeconds - secondsLeft) / totalSeconds) * 100 : 0
+  const timerColor = FEATURE_COLORS.timer
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Study Timer</h1>
+    <motion.div className="space-y-6" variants={staggerContainer} initial="hidden" animate="show">
+      <motion.h1 variants={fadeUpItem} className="text-2xl font-black" style={{ color: timerColor }}>
+        Study Timer ⏱️
+      </motion.h1>
 
-      <div className="card mx-auto max-w-sm space-y-4 p-6 text-center">
+      <motion.div variants={fadeUpItem} className="card relative mx-auto max-w-sm space-y-4 p-6 text-center">
+        <Confetti trigger={burst} />
         {phase === 'idle' && (
           <div className="space-y-3 text-left">
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as ActivityCategory)}
-              className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+              className="w-full rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
             >
               {ACTIVITY_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
@@ -129,10 +141,10 @@ export default function TimerPage() {
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="Session label (optional)"
-              className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+              className="w-full rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
             />
             <div className="flex gap-2">
-              <label className="flex-1 text-xs text-[var(--text-muted)]">
+              <label className="flex-1 text-xs font-semibold text-[var(--text-muted)]">
                 Hours
                 <input
                   type="number"
@@ -140,10 +152,10 @@ export default function TimerPage() {
                   max={12}
                   value={hours}
                   onChange={(e) => setHours(Number(e.target.value))}
-                  className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
                 />
               </label>
-              <label className="flex-1 text-xs text-[var(--text-muted)]">
+              <label className="flex-1 text-xs font-semibold text-[var(--text-muted)]">
                 Minutes
                 <input
                   type="number"
@@ -151,14 +163,11 @@ export default function TimerPage() {
                   max={59}
                   value={minutes}
                   onChange={(e) => setMinutes(Number(e.target.value))}
-                  className="mt-1 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
                 />
               </label>
             </div>
-            <button
-              onClick={start}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white"
-            >
+            <button onClick={start} className="btn w-full py-2 text-sm text-white" style={{ background: timerColor }}>
               <Play size={16} /> Start
             </button>
           </div>
@@ -166,41 +175,43 @@ export default function TimerPage() {
 
         {phase !== 'idle' && (
           <div className="space-y-4">
-            {phase === 'break' && <p className="text-sm font-medium text-[var(--accent)]">Break</p>}
+            {phase === 'break' && <p className="text-sm font-bold" style={{ color: timerColor }}>Break</p>}
             <div
               className="relative mx-auto flex h-48 w-48 items-center justify-center rounded-full"
               style={{
-                background: `conic-gradient(var(--accent) ${progressPct}%, var(--border) 0)`,
+                background: `conic-gradient(${timerColor} ${progressPct}%, var(--border) 0)`,
               }}
             >
-              <div className="flex h-40 w-40 items-center justify-center rounded-full bg-[var(--surface)] text-3xl font-semibold tabular-nums">
+              <div className="flex h-40 w-40 items-center justify-center rounded-full bg-[var(--surface)] text-3xl font-black tabular-nums">
                 {formatTime(secondsLeft)}
               </div>
             </div>
-            <p className="text-sm text-[var(--text-muted)]">
+            <p className="text-sm font-semibold text-[var(--text-muted)]">
               {phase === 'break' ? 'Enjoy your break' : label || category}
             </p>
             <div className="flex justify-center gap-3">
               {phase === 'running' && (
-                <button onClick={pause} className="rounded-lg border border-[var(--border)] p-2">
+                <button onClick={pause} className="btn btn-secondary p-2">
                   <Pause size={18} />
                 </button>
               )}
               {phase === 'paused' && (
-                <button onClick={resume} className="rounded-lg border border-[var(--border)] p-2">
+                <button onClick={resume} className="btn btn-secondary p-2">
                   <Play size={18} />
                 </button>
               )}
-              <button onClick={reset} className="rounded-lg border border-[var(--border)] p-2">
+              <button onClick={reset} className="btn btn-secondary p-2">
                 <RotateCcw size={18} />
               </button>
             </div>
           </div>
         )}
-      </div>
+      </motion.div>
 
-      <TimerHistory />
-    </div>
+      <motion.div variants={fadeUpItem}>
+        <TimerHistory />
+      </motion.div>
+    </motion.div>
   )
 }
 
@@ -222,18 +233,18 @@ function TimerHistory() {
   return (
     <section className="card p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="font-medium">Session history</h2>
+        <h2 className="font-bold">Session history</h2>
         <div className="flex gap-2">
           <input
             type="date"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            className="rounded-lg border border-[var(--border)] bg-transparent px-2 py-1 text-xs"
+            className="rounded-xl border-2 border-[var(--border)] bg-transparent px-2 py-1 text-xs"
           />
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value as ActivityCategory | 'all')}
-            className="rounded-lg border border-[var(--border)] bg-transparent px-2 py-1 text-xs"
+            className="rounded-xl border-2 border-[var(--border)] bg-transparent px-2 py-1 text-xs"
           >
             <option value="all">All categories</option>
             {ACTIVITY_CATEGORIES.map((c) => (
@@ -245,14 +256,14 @@ function TimerHistory() {
         </div>
       </div>
       <div className="max-h-72 space-y-1 overflow-y-auto">
-        {filtered.length === 0 && <p className="text-sm text-[var(--text-muted)]">No sessions logged yet.</p>}
+        {filtered.length === 0 && <p className="text-sm text-[var(--text-muted)]">⏳ No sessions logged yet — start the timer above!</p>}
         {filtered.map((l) => (
-          <div key={l.id} className="flex items-center justify-between rounded-lg border border-[var(--border)] px-3 py-2 text-sm">
+          <div key={l.id} className="flex items-center justify-between rounded-xl border-2 border-[var(--border)] px-3 py-2 text-sm">
             <span className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full" style={{ background: CATEGORY_COLORS[l.category] }} />
               {l.label}
             </span>
-            <span className="text-[var(--text-muted)]">{l.date} · {l.durationMinutes} min</span>
+            <span className="font-semibold text-[var(--text-muted)]">{l.date} · {l.durationMinutes} min</span>
           </div>
         ))}
       </div>

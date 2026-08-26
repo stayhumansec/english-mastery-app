@@ -4,13 +4,17 @@ import { Calendar, dateFnsLocalizer, type View } from 'react-big-calendar'
 import { format, parse, startOfWeek, getDay } from 'date-fns'
 import { enUS } from 'date-fns/locale'
 import { v4 as uuid } from 'uuid'
+import { motion } from 'framer-motion'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { db } from '../../lib/db'
 import { addDaysIso, toIso, todayIso } from '../../lib/date'
 import { expandOccurrences } from './occurrences'
+import Modal from '../../components/motion/Modal'
+import { fadeUpItem, staggerContainer } from '../../lib/motionPresets'
 import {
   ACTIVITY_CATEGORIES,
   CATEGORY_COLORS,
+  FEATURE_COLORS,
   type ActivityCategory,
   type CalendarSession,
   type RecurrenceFreq,
@@ -132,27 +136,24 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Calendar</h1>
-        <button
-          onClick={() => openNew(todayIso())}
-          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white"
-        >
+    <motion.div className="space-y-4" variants={staggerContainer} initial="hidden" animate="show">
+      <motion.div variants={fadeUpItem} className="flex items-center justify-between">
+        <h1 className="text-2xl font-black" style={{ color: FEATURE_COLORS.calendar }}>Calendar 📅</h1>
+        <button onClick={() => openNew(todayIso())} className="btn btn-primary px-3 py-1.5 text-sm">
           New session
         </button>
-      </div>
+      </motion.div>
 
-      <div className="flex flex-wrap gap-3 text-xs">
+      <motion.div variants={fadeUpItem} className="flex flex-wrap gap-3 text-xs font-semibold">
         {ACTIVITY_CATEGORIES.map((c) => (
           <span key={c} className="flex items-center gap-1">
             <span className="h-2 w-2 rounded-full" style={{ background: CATEGORY_COLORS[c] }} />
             {c}
           </span>
         ))}
-      </div>
+      </motion.div>
 
-      <div style={{ height: 640 }}>
+      <motion.div variants={fadeUpItem} style={{ height: 640 }}>
         <Calendar
           localizer={localizer}
           events={events}
@@ -174,22 +175,22 @@ export default function CalendarPage() {
             },
           })}
         />
-      </div>
+      </motion.div>
 
-      {form && (
-        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4" onClick={() => setForm(null)}>
-          <div className="card w-full max-w-sm space-y-3 p-4" onClick={(e) => e.stopPropagation()}>
-            <h2 className="font-medium">{form.id ? 'Edit session' : 'New session'}</h2>
+      <Modal open={!!form} onClose={() => setForm(null)}>
+        {form && (
+          <>
+            <h2 className="font-bold">{form.id ? 'Edit session' : 'New session'}</h2>
             <input
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               placeholder="e.g. Vocabulary review"
-              className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+              className="w-full rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
             />
             <select
               value={form.category}
               onChange={(e) => setForm({ ...form, category: e.target.value as ActivityCategory })}
-              className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+              className="w-full rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
             >
               {ACTIVITY_CATEGORIES.map((c) => (
                 <option key={c} value={c}>{c}</option>
@@ -200,13 +201,13 @@ export default function CalendarPage() {
                 type="date"
                 value={form.date}
                 onChange={(e) => setForm({ ...form, date: e.target.value })}
-                className="flex-1 rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+                className="flex-1 rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
               />
               <input
                 type="time"
                 value={form.startTime}
                 onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-                className="flex-1 rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+                className="flex-1 rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
               />
             </div>
             <label className="flex items-center justify-between text-sm">
@@ -216,13 +217,13 @@ export default function CalendarPage() {
                 min={5}
                 value={form.durationMinutes}
                 onChange={(e) => setForm({ ...form, durationMinutes: Number(e.target.value) })}
-                className="w-20 rounded-lg border border-[var(--border)] bg-transparent px-2 py-1 text-sm"
+                className="w-20 rounded-xl border-2 border-[var(--border)] bg-transparent px-2 py-1 text-sm"
               />
             </label>
             <select
               value={form.recurrence}
               onChange={(e) => setForm({ ...form, recurrence: e.target.value as RecurrenceFreq })}
-              className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+              className="w-full rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
             >
               <option value="none">Does not repeat</option>
               <option value="daily">Every day</option>
@@ -234,29 +235,29 @@ export default function CalendarPage() {
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               placeholder="Notes"
               rows={2}
-              className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+              className="w-full rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
             />
             <div className="flex gap-2">
-              <button onClick={save} className="flex-1 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-medium text-white">
+              <button onClick={save} className="btn btn-primary flex-1 py-2 text-sm">
                 Save
               </button>
               {form.id && (
                 <button
                   onClick={() => toggleComplete(sessions!.find((s) => s.id === form.id)!, form.date)}
-                  className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
+                  className="btn btn-secondary py-2 text-sm"
                 >
                   Toggle done
                 </button>
               )}
               {form.id && (
-                <button onClick={remove} className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-red-500">
+                <button onClick={remove} className="btn btn-secondary py-2 text-sm text-red-500">
                   Delete
                 </button>
               )}
             </div>
-          </div>
-        </div>
-      )}
-    </div>
+          </>
+        )}
+      </Modal>
+    </motion.div>
   )
 }

@@ -1,9 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { db } from '../../lib/db'
 import PatternText, { PatternRoleLegend } from '../../components/PatternText'
-import { CEFR_LEVELS, type CefrLevel, type Pattern, type RecognitionToken } from '../../lib/types'
+import Confetti from '../../components/motion/Confetti'
+import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
+import { CEFR_LEVELS, FEATURE_COLORS, type CefrLevel, type Pattern, type RecognitionToken } from '../../lib/types'
 
 export default function PatternsPage() {
   const patterns = useLiveQuery(() => db.patterns.toArray(), [])
@@ -34,25 +37,27 @@ export default function PatternsPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold">Pattern Library</h1>
-        <p className="text-sm text-[var(--text-muted)]">See how the structure works, not just what the rule says.</p>
-      </div>
+    <motion.div className="space-y-4" variants={staggerContainer} initial="hidden" animate="show">
+      <motion.div variants={fadeUpItem}>
+        <h1 className="text-2xl font-black" style={{ color: FEATURE_COLORS.patterns }}>Pattern Library 🧩</h1>
+        <p className="text-sm font-medium text-[var(--text-muted)]">See how the structure works, not just what the rule says.</p>
+      </motion.div>
 
-      <PatternRoleLegend />
+      <motion.div variants={fadeUpItem}>
+        <PatternRoleLegend />
+      </motion.div>
 
-      <div className="flex flex-wrap gap-2">
+      <motion.div variants={fadeUpItem} className="flex flex-wrap gap-2">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search patterns…"
-          className="flex-1 min-w-[10rem] rounded-lg border border-[var(--border)] bg-transparent px-3 py-1.5 text-sm"
+          className="flex-1 min-w-[10rem] rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-1.5 text-sm"
         />
         <select
           value={levelFilter}
           onChange={(e) => setLevelFilter(e.target.value as CefrLevel | 'all')}
-          className="rounded-lg border border-[var(--border)] bg-transparent px-2 py-1.5 text-sm"
+          className="rounded-xl border-2 border-[var(--border)] bg-transparent px-2 py-1.5 text-sm"
         >
           <option value="all">All levels</option>
           {CEFR_LEVELS.map((l) => (
@@ -62,33 +67,34 @@ export default function PatternsPage() {
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="rounded-lg border border-[var(--border)] bg-transparent px-2 py-1.5 text-sm"
+          className="rounded-xl border-2 border-[var(--border)] bg-transparent px-2 py-1.5 text-sm"
         >
           <option value="all">All categories</option>
           {categories.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
-      </div>
+      </motion.div>
 
-      <div className="grid gap-2 sm:grid-cols-2">
+      <motion.div variants={fadeUpItem} className="grid gap-2 sm:grid-cols-2">
         {filtered.map((p) => (
           <button
             key={p.id}
             onClick={() => setSelected(p)}
-            className="card space-y-1 p-3 text-left hover:border-[var(--accent)]"
+            className="card space-y-1 p-3 text-left transition-colors"
+            style={{ borderLeft: `6px solid ${FEATURE_COLORS.patterns}` }}
           >
             <div className="flex items-center justify-between">
-              <span className="font-medium">{p.name}</span>
-              <span className="text-xs text-[var(--text-muted)]">{p.level}</span>
+              <span className="font-bold">{p.name}</span>
+              <span className="text-xs font-semibold text-[var(--text-muted)]">{p.level}</span>
             </div>
             <p className="text-xs text-[var(--text-muted)]">{p.category}</p>
             <PatternText segments={p.structureTemplate} />
           </button>
         ))}
-        {filtered.length === 0 && <p className="text-sm text-[var(--text-muted)]">No patterns match.</p>}
-      </div>
-    </div>
+        {filtered.length === 0 && <p className="text-sm text-[var(--text-muted)]">🔍 No patterns match — try a different search or filter.</p>}
+      </motion.div>
+    </motion.div>
   )
 }
 
@@ -100,56 +106,55 @@ function PatternDetail({ pattern, onBack }: { pattern: Pattern; onBack: () => vo
   const [showRecognition, setShowRecognition] = useState(false)
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5">
-      <button onClick={onBack} className="text-sm text-[var(--text-muted)]">← All patterns</button>
+    <motion.div className="mx-auto max-w-2xl space-y-5" variants={staggerContainer} initial="hidden" animate="show">
+      <motion.button variants={fadeUpItem} onClick={onBack} className="text-sm font-semibold text-[var(--text-muted)]">← All patterns</motion.button>
 
-      <div>
+      <motion.div variants={fadeUpItem}>
         <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold">{pattern.name}</h1>
-          <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs text-[var(--accent)]">{pattern.level}</span>
+          <h1 className="text-xl font-black">{pattern.name}</h1>
+          <span
+            className="rounded-full px-2 py-0.5 text-xs font-bold text-white"
+            style={{ background: FEATURE_COLORS.patterns }}
+          >
+            {pattern.level}
+          </span>
         </div>
-        <p className="text-sm text-[var(--text-muted)]">{pattern.category}</p>
-      </div>
+        <p className="text-sm font-medium text-[var(--text-muted)]">{pattern.category}</p>
+      </motion.div>
 
-      <section className="card p-4">
-        <h2 className="mb-2 text-sm font-medium text-[var(--text-muted)]">Structure</h2>
+      <motion.section variants={fadeUpItem} className="card p-4">
+        <h2 className="mb-2 text-sm font-bold text-[var(--text-muted)]">Structure</h2>
         <p className="text-lg"><PatternText segments={pattern.structureTemplate} /></p>
-      </section>
+      </motion.section>
 
-      <section className="space-y-2">
-        <h2 className="text-sm font-medium text-[var(--text-muted)]">Examples</h2>
+      <motion.section variants={fadeUpItem} className="space-y-2">
+        <h2 className="text-sm font-bold text-[var(--text-muted)]">Examples</h2>
         {pattern.examples.map((ex, i) => (
           <div key={i} className="card p-3">
             <span className="mb-1 block text-[10px] uppercase tracking-wide text-[var(--text-muted)]">{ex.context}</span>
             <p><PatternText segments={ex.segments} /></p>
           </div>
         ))}
-      </section>
+      </motion.section>
 
-      <section className="card space-y-3 p-4">
+      <motion.section variants={fadeUpItem} className="card space-y-3 p-4">
         <div>
-          <h2 className="text-sm font-medium text-[var(--text-muted)]">Common mistake</h2>
+          <h2 className="text-sm font-bold text-[var(--text-muted)]">Common mistake</h2>
           <p className="text-sm">{pattern.commonMistake}</p>
         </div>
         <div>
-          <h2 className="text-sm font-medium text-[var(--text-muted)]">Contrast — often confused with</h2>
+          <h2 className="text-sm font-bold text-[var(--text-muted)]">Contrast — often confused with</h2>
           <p className="text-sm text-red-500 line-through decoration-red-400">{pattern.contrastWrong}</p>
           <p className="text-sm text-[var(--text-muted)]">{pattern.contrastNote}</p>
         </div>
-      </section>
+      </motion.section>
 
       <section className="flex flex-wrap gap-3">
-        <Link
-          to={`/drills?patternId=${pattern.id}`}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white"
-        >
+        <Link to={`/drills?patternId=${pattern.id}`} className="btn px-4 py-2 text-sm text-white" style={{ background: FEATURE_COLORS.patterns }}>
           Practice in Sentence Drills
         </Link>
         {pattern.recognitionParagraph && (
-          <button
-            onClick={() => setShowRecognition((v) => !v)}
-            className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm"
-          >
+          <button onClick={() => setShowRecognition((v) => !v)} className="btn btn-secondary px-4 py-2 text-sm">
             {showRecognition ? 'Hide' : 'Spot the Pattern warm-up'}
           </button>
         )}
@@ -169,13 +174,14 @@ function PatternDetail({ pattern, onBack }: { pattern: Pattern; onBack: () => vo
           ))}
         </section>
       )}
-    </div>
+    </motion.div>
   )
 }
 
 function SpotThePattern({ tokens, patternName }: { tokens: RecognitionToken[]; patternName: string }) {
   const [selectedIdx, setSelectedIdx] = useState<Set<number>>(new Set())
   const [submitted, setSubmitted] = useState(false)
+  const [burst, setBurst] = useState(0)
 
   const toggle = (i: number) => {
     if (submitted) return
@@ -194,13 +200,22 @@ function SpotThePattern({ tokens, patternName }: { tokens: RecognitionToken[]; p
 
   const correctCount = tokens.filter((t, i) => t.isTarget && selectedIdx.has(i)).length
   const totalTargets = tokens.filter((t) => t.isTarget).length
+  const perfect = correctCount === totalTargets
+
+  const handleSubmit = () => {
+    setSubmitted(true)
+    if (perfect) setBurst((b) => b + 1)
+  }
 
   return (
-    <section className="card space-y-3 p-4">
+    <section className="card relative space-y-3 p-4">
+      <Confetti trigger={burst} />
       <div className="flex items-center justify-between">
-        <h2 className="font-medium">Spot the Pattern: {patternName}</h2>
+        <h2 className="font-bold">Spot the Pattern: {patternName}</h2>
         {submitted && (
-          <span className="text-xs text-[var(--text-muted)]">{correctCount}/{totalTargets} found</span>
+          <span className="text-xs font-bold" style={{ color: perfect ? 'var(--accent)' : 'var(--text-muted)' }}>
+            {correctCount}/{totalTargets} found {perfect ? '🎉' : ''}
+          </span>
         )}
       </div>
       <p className="text-xs text-[var(--text-muted)]">Click every word or phrase that matches this pattern, then submit.</p>
@@ -226,11 +241,11 @@ function SpotThePattern({ tokens, patternName }: { tokens: RecognitionToken[]; p
       </p>
       <div className="flex gap-2">
         {!submitted ? (
-          <button onClick={() => setSubmitted(true)} className="rounded-lg bg-[var(--accent)] px-4 py-1.5 text-sm text-white">
+          <button onClick={handleSubmit} className="btn px-4 py-1.5 text-sm text-white" style={{ background: FEATURE_COLORS.patterns }}>
             Submit
           </button>
         ) : (
-          <button onClick={reset} className="rounded-lg border border-[var(--border)] px-4 py-1.5 text-sm">
+          <button onClick={reset} className="btn btn-secondary px-4 py-1.5 text-sm">
             Try again
           </button>
         )}

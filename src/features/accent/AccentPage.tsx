@@ -1,9 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 import { v4 as uuid } from 'uuid'
+import { motion } from 'framer-motion'
 import { db } from '../../lib/db'
 import { todayIso } from '../../lib/date'
-import { CEFR_LEVELS, SCENARIO_CATEGORIES, type AccentLog, type CefrLevel, type ScenarioCategory, type ScenarioPrompt } from '../../lib/types'
+import { useToast } from '../../components/motion/ToastProvider'
+import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
+import { CEFR_LEVELS, FEATURE_COLORS, SCENARIO_CATEGORIES, type AccentLog, type CefrLevel, type ScenarioCategory, type ScenarioPrompt } from '../../lib/types'
 import { Play, Square, Trash2 } from 'lucide-react'
 
 const CATEGORY_LABEL: Record<ScenarioCategory, string> = {
@@ -32,6 +35,8 @@ export default function AccentPage() {
   const [activity, setActivity] = useState('')
   const [rating, setRating] = useState<AccentLog['rating']>(3)
   const [notes, setNotes] = useState('')
+  const { showToast } = useToast()
+  const color = FEATURE_COLORS.accent
 
   useEffect(() => () => { if (intervalRef.current) window.clearInterval(intervalRef.current) }, [])
 
@@ -77,6 +82,7 @@ export default function AccentPage() {
     setCurrentPrompt(null)
     setSeconds(0)
     setRunning(false)
+    showToast('Practice logged!', '🎤')
   }
 
   const remove = (id: string) => db.accentLogs.delete(id)
@@ -87,47 +93,51 @@ export default function AccentPage() {
   }))
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Speaking & Accent Log</h1>
+    <motion.div className="space-y-6" variants={staggerContainer} initial="hidden" animate="show">
+      <motion.h1 variants={fadeUpItem} className="text-2xl font-black" style={{ color }}>Speaking & Accent Log 🎤</motion.h1>
 
-      <section className="card space-y-2 p-4">
-        <h2 className="text-sm font-medium text-[var(--text-muted)]">Category coverage</h2>
+      <motion.section variants={fadeUpItem} className="card space-y-2 p-4">
+        <h2 className="text-sm font-bold text-[var(--text-muted)]">Category coverage</h2>
         <div className="flex flex-wrap gap-3">
           {coverage.map((c) => (
-            <span key={c.category} className={`rounded-full px-3 py-1 text-xs ${c.count === 0 ? 'bg-red-100 text-red-600' : 'bg-[var(--accent-soft)] text-[var(--accent)]'}`}>
+            <span
+              key={c.category}
+              className="rounded-full px-3 py-1 text-xs font-bold"
+              style={c.count === 0 ? { background: '#fee2e2', color: '#dc2626' } : { background: 'var(--pink-soft)', color }}
+            >
               {CATEGORY_LABEL[c.category]}: {c.count}
             </span>
           ))}
         </div>
-      </section>
+      </motion.section>
 
-      <section className="card mx-auto max-w-md space-y-3 p-4">
+      <motion.section variants={fadeUpItem} className="card mx-auto max-w-md space-y-3 p-4">
         <div className="flex gap-2">
           <select
             value={level}
             onChange={(e) => setLevel(e.target.value as CefrLevel)}
-            className="rounded-lg border border-[var(--border)] bg-transparent px-2 py-2 text-sm"
+            className="rounded-xl border-2 border-[var(--border)] bg-transparent px-2 py-2 text-sm"
           >
             {CEFR_LEVELS.map((l) => (
               <option key={l} value={l}>{l}</option>
             ))}
           </select>
-          <button onClick={getPrompt} className="flex-1 rounded-lg border border-[var(--border)] px-3 py-2 text-sm">
+          <button onClick={getPrompt} className="btn btn-secondary flex-1 py-2 text-sm">
             Get a scenario prompt
           </button>
         </div>
 
         {currentPrompt && (
-          <div className="rounded-lg bg-[var(--accent-soft)] p-3 text-sm">
-            <span className="text-xs uppercase tracking-wide text-[var(--accent)]">{CATEGORY_LABEL[currentPrompt.category]} · {currentPrompt.level}</span>
+          <div className="rounded-xl p-3 text-sm" style={{ background: 'var(--pink-soft)' }}>
+            <span className="text-xs font-bold uppercase tracking-wide" style={{ color }}>{CATEGORY_LABEL[currentPrompt.category]} · {currentPrompt.level}</span>
             <p className="mt-1">{currentPrompt.prompt}</p>
           </div>
         )}
 
         {currentPrompt && (
-          <div className="flex items-center justify-center gap-3 rounded-lg border border-[var(--border)] py-3">
-            <span className="tabular-nums text-lg font-semibold">{formatSeconds(seconds)}</span>
-            <button onClick={toggleTimer} className="rounded-lg bg-[var(--accent)] p-2 text-white">
+          <div className="flex items-center justify-center gap-3 rounded-xl border-2 border-[var(--border)] py-3">
+            <span className="tabular-nums text-lg font-black">{formatSeconds(seconds)}</span>
+            <button onClick={toggleTimer} className="btn p-2 text-white" style={{ background: color }}>
               {running ? <Square size={16} /> : <Play size={16} />}
             </button>
             <span className="text-xs text-[var(--text-muted)]">record yourself out loud — nothing is saved, just the time</span>
@@ -138,7 +148,7 @@ export default function AccentPage() {
           value={activity}
           onChange={(e) => setActivity(e.target.value)}
           placeholder="What did you shadow/practice? e.g. Rachel's English — vowel sounds"
-          className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+          className="w-full rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
         />
         <div className="flex items-center justify-between text-sm">
           <span>Self-rating</span>
@@ -147,9 +157,8 @@ export default function AccentPage() {
               <button
                 key={n}
                 onClick={() => setRating(n as AccentLog['rating'])}
-                className={`h-8 w-8 rounded-full text-sm ${
-                  rating === n ? 'bg-[var(--accent)] text-white' : 'border border-[var(--border)]'
-                }`}
+                className="btn h-8 w-8 p-0 text-sm text-white"
+                style={rating === n ? { background: color } : { background: 'transparent', color: 'var(--text)', border: '2px solid var(--border)', boxShadow: 'none' }}
               >
                 {n}
               </button>
@@ -161,16 +170,16 @@ export default function AccentPage() {
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Notes (what went well, what to fix next time)"
           rows={2}
-          className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+          className="w-full rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
         />
-        <button onClick={submit} className="w-full rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white">
+        <button onClick={submit} className="btn w-full py-2 text-sm text-white" style={{ background: color }}>
           Log practice
         </button>
-      </section>
+      </motion.section>
 
-      <section className="space-y-2">
-        <h2 className="font-medium">History</h2>
-        {logs?.length === 0 && <p className="text-sm text-[var(--text-muted)]">No entries yet.</p>}
+      <motion.section variants={fadeUpItem} className="space-y-2">
+        <h2 className="font-bold">History</h2>
+        {logs?.length === 0 && <p className="text-sm text-[var(--text-muted)]">🎙️ No entries yet — get a prompt above and give it a try!</p>}
         {logs?.map((log) => (
           <div key={log.id} className="card flex items-start justify-between gap-3 p-3">
             <div>
@@ -189,7 +198,7 @@ export default function AccentPage() {
             </button>
           </div>
         ))}
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   )
 }
