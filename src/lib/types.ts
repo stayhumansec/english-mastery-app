@@ -55,6 +55,12 @@ export interface RoadmapModule {
   notes: string
   order: number
   createdAt: number
+  /** Set once the learner has opened this module's lesson content. */
+  lessonViewed?: boolean
+  /** Best score (0-100) achieved on this lesson's mini-quiz. Modules with
+   * quiz content can only be marked "done" once this clears the pass
+   * threshold — see QUIZ_PASS_THRESHOLD in lessonContent.ts. */
+  quizBestScore?: number
 }
 
 export type ActivityCategory =
@@ -289,9 +295,30 @@ export interface Pattern {
   commonMistake: string
   contrastWrong: string
   contrastNote: string
+  /** A one-line "why this works" rule, shown after Spot-the-Pattern
+   * attempts and on the back of linked Grammar-in-Context flashcards. */
+  ruleExplanation: string
   recognitionParagraph?: RecognitionToken[]
   createdAt: number
 }
+
+export interface QuizQuestionMCQ {
+  type: 'mcq'
+  prompt: string
+  options: string[]
+  correctIndex: number
+  explanation: string
+}
+
+export interface QuizQuestionFill {
+  type: 'fill'
+  prompt: string
+  /** Any of these (case-insensitive, trimmed) counts as correct. */
+  acceptedAnswers: string[]
+  explanation: string
+}
+
+export type QuizQuestion = QuizQuestionMCQ | QuizQuestionFill
 
 export interface WeeklyFocus {
   weekKey: string // ISO-ish "YYYY-Www"
