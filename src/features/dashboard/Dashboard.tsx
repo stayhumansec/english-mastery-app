@@ -13,8 +13,8 @@ import AnimatedNumber from '../../components/motion/AnimatedNumber'
 import Confetti from '../../components/motion/Confetti'
 import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
 import { ensureWeeklyFocus, patternsForModule } from '../../lib/weeklyFocus'
-import { CATEGORY_COLORS, FEATURE_COLORS, type ActivityCategory } from '../../lib/types'
-import { BookOpen, Check, Flame, Layers, Mic, PenLine, Sparkles, Timer } from 'lucide-react'
+import { CATEGORY_COLORS, CEFR_LEVELS, FEATURE_COLORS, type ActivityCategory } from '../../lib/types'
+import { BookOpen, Check, Flame, GraduationCap, Layers, Mic, PenLine, Sparkles, Timer } from 'lucide-react'
 
 export default function Dashboard() {
   const modules = useLiveQuery(() => db.modules.toArray(), [])
@@ -86,6 +86,16 @@ export default function Dashboard() {
   const weeklyFocusModule = modules?.find((m) => m.id === weeklyFocusModuleId)
   const focusPatterns = weeklyFocusModule && patterns ? patternsForModule(weeklyFocusModule, patterns) : []
 
+  const nextLesson = useMemo(() => {
+    if (!modules) return null
+    for (const level of CEFR_LEVELS) {
+      const levelModules = modules.filter((m) => m.level === level).sort((a, b) => a.order - b.order)
+      const next = levelModules.find((m) => m.status !== 'done')
+      if (next) return next
+    }
+    return null
+  }, [modules])
+
   return (
     <motion.div className="space-y-6" variants={staggerContainer} initial="hidden" animate="show">
       <motion.div
@@ -122,6 +132,23 @@ export default function Dashboard() {
           bg="var(--blue-soft)"
         />
       </motion.div>
+
+      {nextLesson && (
+        <motion.div variants={fadeUpItem}>
+          <Link
+            to={`/roadmap?lesson=${nextLesson.id}`}
+            className="card flex items-center gap-3 p-4 transition-colors hover:border-[var(--accent)]"
+            style={{ background: 'var(--accent-soft)', borderColor: 'transparent' }}
+          >
+            <IconBadge icon={GraduationCap} color="var(--accent)" size={44} />
+            <div className="flex-1">
+              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--accent-dark)' }}>Continue learning</p>
+              <p className="font-bold">{nextLesson.level} — {nextLesson.title}</p>
+            </div>
+            <span className="btn btn-primary px-4 py-2 text-sm">Continue</span>
+          </Link>
+        </motion.div>
+      )}
 
       <motion.div variants={fadeUpItem} className="flex flex-wrap gap-3">
         <Link to="/timer" className="btn btn-primary px-4 py-2 text-sm">

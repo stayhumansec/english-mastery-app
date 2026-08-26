@@ -1,14 +1,19 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { motion } from 'framer-motion'
 import { db } from '../../lib/db'
 import ProgressBar from '../../components/ProgressBar'
 import Confetti from '../../components/motion/Confetti'
+import Quiz from '../../components/Quiz'
+import SpotThePattern from '../../components/SpotThePattern'
 import { useToast } from '../../components/motion/ToastProvider'
 import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
-import { CEFR_LEVELS, LEVEL_COLORS, type CefrLevel, type ModuleStatus, type RoadmapModule } from '../../lib/types'
-import { Plus, Trash2 } from 'lucide-react'
+import { LESSON_CONTENT, QUIZ_PASS_THRESHOLD } from '../../lib/lessonContent'
+import { patternsForModule } from '../../lib/weeklyFocus'
+import { CEFR_LEVELS, LEVEL_COLORS, type CefrLevel, type ModuleStatus, type Pattern, type RoadmapModule } from '../../lib/types'
+import { Lock, Plus, Trash2 } from 'lucide-react'
 
 const STATUS_LABEL: Record<ModuleStatus, string> = {
   not_started: 'Not started',
@@ -25,12 +30,40 @@ function levelProgress(modules: RoadmapModule[]): number {
 
 export default function Roadmap() {
   const modules = useLiveQuery(() => db.modules.orderBy('order').toArray(), [])
+  const patterns = useLiveQuery(() => db.patterns.toArray(), [])
   const [addingFor, setAddingFor] = useState<CefrLevel | null>(null)
   const { showToast } = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const lessonModuleId = searchParams.get('lesson')
 
   if (!modules) return <p className="text-sm text-[var(--text-muted)]">Loading…</p>
 
   const overall = levelProgress(modules)
+
+  const updateModule = async (id: string, patch: Partial<RoadmapModule>) => {
+    await db.modules.update(id, patch)
+    if (patch.status === 'done') showToast('Module complete — nice work!', '🎉')
+  }
+
+  const openLesson = (id: string) => setSearchParams({ lesson: id })
+  const closeLesson = () => setSearchParams({})
+
+  const lessonModule = lessonModuleId ? modules.find((m) => m.id === lessonModuleId) : null
+  if (lessonModule) {
+    const levelModules = modules.filter((m) => m.level === lessonModule.level).sort((a, b) => a.order - b.order)
+    const idx = levelModules.findIndex((m) => m.id === lessonModule.id)
+    const prevModule = idx > 0 ? levelModules[idx - 1] : null
+    return (
+      <LessonView
+        module={lessonModule}
+        prevModule={prevModule}
+        patterns={patterns ?? []}
+        onBack={closeLesson}
+        onUpdate={(patch) => updateModule(lessonModule.id, patch)}
+      />
+    )
+  }
 
   const addModule = async (level: CefrLevel, title: string) => {
     if (!title.trim()) return
@@ -46,11 +79,6 @@ export default function Roadmap() {
       createdAt: Date.now(),
     })
     setAddingFor(null)
-  }
-
-  const updateModule = async (id: string, patch: Partial<RoadmapModule>) => {
-    await db.modules.update(id, patch)
-    if (patch.status === 'done') showToast('Module complete — nice work!', '🎉')
   }
 
   const deleteModule = async (id: string) => {
@@ -73,7 +101,9 @@ export default function Roadmap() {
     <motion.div className="space-y-6" variants={staggerContainer} initial="hidden" animate="show">
       <motion.div variants={fadeUpItem}>
         <h1 className="text-2xl font-black">CEFR Roadmap 🗺️</h1>
-        <p className="text-sm font-medium text-[var(--text-muted)]">A1 → C2 curriculum tracker</p>
+        <p className="text-sm font-medium text-[var(--text-muted)]">
+          A guided course, A1 → C2 — work through each level in order.
+        </p>
         <div className="mt-3 max-w-sm">
           <ProgressBar value={overall} label="Overall progress" color="var(--accent)" thick />
         </div>
@@ -122,16 +152,23 @@ export default function Roadmap() {
             )}
 
             <div className="space-y-2">
-              {levelModules.map((mod) => (
-                <ModuleRow
-                  key={mod.id}
-                  mod={mod}
-                  color={color}
-                  onUpdate={(patch) => updateModule(mod.id, patch)}
-                  onDelete={() => deleteModule(mod.id)}
-                  onMove={(dir) => moveModule(mod, dir)}
-                />
-              ))}
+              {levelModules.map((mod, i) => {
+                const prevDone = i === 0 || levelModules[i - 1].status === 'done'
+                return (
+                  <ModuleRow
+                    key={mod.id}
+                    mod={mod}
+                    color={color}
+                    locked={!prevDone}
+                    recommendedAfter={i > 0 ? levelModules[i - 1].title : undefined}
+                    hasLesson={!!LESSON_CONTENT[mod.title]}
+                    onOpen={() => openLesson(mod.id)}
+                    onUpdate={(patch) => updateModule(mod.id, patch)}
+                    onDelete={() => deleteModule(mod.id)}
+                    onMove={(dir) => moveModule(mod, dir)}
+                  />
+                )
+              })}
               {levelModules.length === 0 && (
                 <p className="text-sm text-[var(--text-muted)]">No modules yet — add your first one above!</p>
               )}
@@ -181,56 +218,78 @@ function AddModuleForm({
 function ModuleRow({
   mod,
   color,
+  locked,
+  recommendedAfter,
+  hasLesson,
+  onOpen,
   onUpdate,
   onDelete,
   onMove,
 }: {
   mod: RoadmapModule
   color: string
+  locked: boolean
+  recommendedAfter?: string
+  hasLesson: boolean
+  onOpen: () => void
   onUpdate: (patch: Partial<RoadmapModule>) => void
   onDelete: () => void
   onMove: (dir: -1 | 1) => void
 }) {
   const [expanded, setExpanded] = useState(false)
-  const [burst, setBurst] = useState(0)
-
-  const handleStatusChange = (status: ModuleStatus) => {
-    if (status === 'done' && mod.status !== 'done') setBurst((b) => b + 1)
-    onUpdate({ status })
-  }
 
   return (
     <div
       className="relative rounded-xl border-2 p-3 transition-colors"
-      style={{ borderColor: mod.status === 'done' ? color : 'var(--border)' }}
+      style={{ borderColor: mod.status === 'done' ? color : 'var(--border)', opacity: locked ? 0.7 : 1 }}
     >
-      <Confetti trigger={burst} />
       <div className="flex items-center gap-2">
         <div className="flex flex-col">
           <button onClick={() => onMove(-1)} className="text-xs text-[var(--text-muted)] hover:text-[var(--text)]">▲</button>
           <button onClick={() => onMove(1)} className="text-xs text-[var(--text-muted)] hover:text-[var(--text)]">▼</button>
         </div>
-        <button className="flex-1 text-left" onClick={() => setExpanded((v) => !v)}>
+        <button className="flex-1 text-left" onClick={onOpen}>
           <span className={`font-semibold ${mod.status === 'done' ? 'line-through text-[var(--text-muted)]' : ''}`}>
+            {locked && <Lock size={12} className="mr-1 inline text-[var(--text-muted)]" />}
             {mod.title}
           </span>
+          {hasLesson && <span className="ml-2 text-xs font-bold" style={{ color }}>Lesson →</span>}
         </button>
-        <select
-          value={mod.status}
-          onChange={(e) => handleStatusChange(e.target.value as ModuleStatus)}
-          className="rounded-full border-2 px-2 py-1 text-xs font-bold"
-          style={{ borderColor: color, color: mod.status === 'not_started' ? 'var(--text-muted)' : color }}
-        >
-          {Object.entries(STATUS_LABEL).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
+        {hasLesson ? (
+          <span
+            className="rounded-full px-2 py-1 text-xs font-bold"
+            style={{
+              background: mod.status === 'done' ? color : 'var(--surface-alt)',
+              color: mod.status === 'done' ? 'white' : 'var(--text-muted)',
+            }}
+          >
+            {STATUS_LABEL[mod.status]}
+          </span>
+        ) : (
+          <select
+            value={mod.status}
+            onChange={(e) => onUpdate({ status: e.target.value as ModuleStatus })}
+            className="rounded-full border-2 px-2 py-1 text-xs font-bold"
+            style={{ borderColor: color, color: mod.status === 'not_started' ? 'var(--text-muted)' : color }}
+          >
+            {Object.entries(STATUS_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        )}
+        <button onClick={() => setExpanded((v) => !v)} className="text-xs text-[var(--text-muted)] hover:text-[var(--text)]">
+          {expanded ? 'Less' : 'Notes'}
+        </button>
         <button onClick={onDelete} className="text-[var(--text-muted)] hover:text-red-500">
           <Trash2 size={16} />
         </button>
       </div>
+
+      {locked && recommendedAfter && (
+        <p className="mt-1 pl-6 text-xs text-[var(--text-muted)]">Recommended after completing "{recommendedAfter}"</p>
+      )}
 
       {expanded && (
         <div className="mt-3 space-y-2 pl-6">
@@ -251,5 +310,185 @@ function ModuleRow({
         </div>
       )}
     </div>
+  )
+}
+
+function LessonView({
+  module: mod,
+  prevModule,
+  patterns,
+  onBack,
+  onUpdate,
+}: {
+  module: RoadmapModule
+  prevModule: RoadmapModule | null
+  patterns: Pattern[]
+  onBack: () => void
+  onUpdate: (patch: Partial<RoadmapModule>) => void
+}) {
+  const color = LEVEL_COLORS[mod.level]
+  const lesson = LESSON_CONTENT[mod.title]
+  const locked = !!prevModule && prevModule.status !== 'done'
+  const [burst, setBurst] = useState(0)
+  const { showToast } = useToast()
+
+  useEffect(() => {
+    if (!mod.lessonViewed) {
+      onUpdate({ lessonViewed: true, status: mod.status === 'not_started' ? 'in_progress' : mod.status })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mod.id])
+
+  const linkedPattern = lesson?.linkPatternName ? patterns.find((p) => p.name === lesson.linkPatternName) : undefined
+  const fallbackPatterns = !lesson ? patternsForModule(mod, patterns) : []
+
+  const canMarkDone = lesson ? (mod.quizBestScore ?? 0) >= QUIZ_PASS_THRESHOLD : true
+  const passed = (mod.quizBestScore ?? 0) >= QUIZ_PASS_THRESHOLD
+
+  const markDone = () => {
+    onUpdate({ status: 'done' })
+    setBurst((b) => b + 1)
+    showToast('Lesson complete — great work!', '🎓')
+  }
+
+  return (
+    <motion.div className="relative mx-auto max-w-2xl space-y-5" variants={staggerContainer} initial="hidden" animate="show">
+      <Confetti trigger={burst} />
+      <motion.button variants={fadeUpItem} onClick={onBack} className="text-sm font-semibold text-[var(--text-muted)]">
+        ← Back to Roadmap
+      </motion.button>
+
+      <motion.div variants={fadeUpItem}>
+        <div className="flex items-center gap-2">
+          <span className="rounded-full px-2 py-0.5 text-xs font-bold text-white" style={{ background: color }}>
+            {mod.level}
+          </span>
+          {locked && (
+            <span className="flex items-center gap-1 text-xs font-semibold text-[var(--text-muted)]">
+              <Lock size={12} /> Recommended after "{prevModule!.title}"
+            </span>
+          )}
+        </div>
+        <h1 className="text-2xl font-black">{mod.title}</h1>
+      </motion.div>
+
+      {!lesson && (
+        <motion.section variants={fadeUpItem} className="card space-y-3 p-4">
+          <p className="text-sm text-[var(--text-muted)]">
+            📘 Full lesson content for this module is coming soon. In the meantime, here's what's here so far —
+            you can still track your own progress manually below.
+          </p>
+          {mod.description && <p className="text-sm">{mod.description}</p>}
+          {fallbackPatterns.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Related patterns</p>
+              {fallbackPatterns.map((p) => (
+                <Link key={p.id} to="/patterns" className="block rounded-xl border-2 border-[var(--border)] p-2 text-sm hover:border-[var(--accent)]">
+                  {p.name}
+                </Link>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center gap-2 pt-2">
+            <span className="text-sm font-semibold">Status</span>
+            <select
+              value={mod.status}
+              onChange={(e) => onUpdate({ status: e.target.value as ModuleStatus })}
+              className="rounded-full border-2 px-3 py-1 text-sm font-bold"
+              style={{ borderColor: color, color }}
+            >
+              {Object.entries(STATUS_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </div>
+        </motion.section>
+      )}
+
+      {lesson && (
+        <>
+          <motion.section variants={fadeUpItem} className="card space-y-2 p-4">
+            <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color }}>Concept</h2>
+            {lesson.concept.map((para, i) => (
+              <p key={i} className="text-sm leading-relaxed">{para}</p>
+            ))}
+          </motion.section>
+
+          <motion.section variants={fadeUpItem} className="space-y-2">
+            <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color }}>Examples</h2>
+            {lesson.examples.map((ex, i) => (
+              <div key={i} className="card p-3">
+                <span className="mb-1 block text-[10px] uppercase tracking-wide text-[var(--text-muted)]">{ex.context}</span>
+                <p className="text-sm">{ex.text}</p>
+              </div>
+            ))}
+          </motion.section>
+
+          <motion.section variants={fadeUpItem} className="card space-y-2 p-4" style={{ background: 'var(--orange-soft)' }}>
+            <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color: 'var(--orange)' }}>Watch out for this</h2>
+            <ul className="list-disc space-y-1 pl-5 text-sm">
+              {lesson.commonMistakes.map((m, i) => (
+                <li key={i}>{m}</li>
+              ))}
+            </ul>
+          </motion.section>
+
+          <motion.section variants={fadeUpItem} className="space-y-3">
+            <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color }}>Practice</h2>
+            <div className="flex flex-wrap gap-3">
+              {lesson.linkDecks?.map((deck) => (
+                <Link key={deck} to="/flashcards" className="btn btn-secondary px-3 py-1.5 text-sm">
+                  Review "{deck}" flashcards
+                </Link>
+              ))}
+              {linkedPattern && (
+                <Link to={`/drills?patternId=${linkedPattern.id}`} className="btn px-3 py-1.5 text-sm text-white" style={{ background: color }}>
+                  Sentence Production Drill
+                </Link>
+              )}
+            </div>
+            {linkedPattern?.recognitionParagraph && (
+              <SpotThePattern
+                tokens={linkedPattern.recognitionParagraph}
+                patternName={linkedPattern.name}
+                ruleExplanation={linkedPattern.ruleExplanation}
+              />
+            )}
+          </motion.section>
+
+          <motion.section variants={fadeUpItem} className="card space-y-3 p-4">
+            <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color }}>Quick check</h2>
+            <Quiz
+              questions={lesson.quiz}
+              color={color}
+              onComplete={(pct) => onUpdate({ quizBestScore: Math.max(mod.quizBestScore ?? 0, pct) })}
+            />
+          </motion.section>
+
+          <motion.section variants={fadeUpItem} className="text-center">
+            {mod.status === 'done' ? (
+              <p className="font-bold" style={{ color }}>✅ Module complete</p>
+            ) : (
+              <button
+                onClick={markDone}
+                disabled={!canMarkDone}
+                className="btn px-6 py-2 text-sm text-white disabled:opacity-40"
+                style={{ background: color }}
+              >
+                Mark as done
+              </button>
+            )}
+            {!canMarkDone && mod.status !== 'done' && (
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
+                Score {QUIZ_PASS_THRESHOLD}%+ on the quick check above to mark this module done.
+              </p>
+            )}
+            {passed && mod.status !== 'done' && (
+              <p className="mt-1 text-xs" style={{ color }}>Best score: {mod.quizBestScore}% — nice, you've passed!</p>
+            )}
+          </motion.section>
+        </>
+      )}
+    </motion.div>
   )
 }
