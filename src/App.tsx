@@ -14,6 +14,7 @@ import DrillsPage from './features/drills/DrillsPage'
 import PatternsPage from './features/patterns/PatternsPage'
 import { seedIfEmpty } from './lib/seed'
 import { useReminders } from './features/settings/useReminders'
+import { ToastProvider } from './components/motion/ToastProvider'
 
 export default function App() {
   useEffect(() => {
@@ -23,20 +24,22 @@ export default function App() {
   useReminders()
 
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route index element={<Dashboard />} />
-        <Route path="roadmap" element={<Roadmap />} />
-        <Route path="calendar" element={<CalendarPage />} />
-        <Route path="timer" element={<TimerPage />} />
-        <Route path="flashcards" element={<FlashcardsPage />} />
-        <Route path="input" element={<InputLogPage />} />
-        <Route path="journal" element={<JournalPage />} />
-        <Route path="drills" element={<DrillsPage />} />
-        <Route path="patterns" element={<PatternsPage />} />
-        <Route path="accent" element={<AccentPage />} />
-        <Route path="settings" element={<SettingsPage />} />
-      </Route>
-    </Routes>
+    <ToastProvider>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="roadmap" element={<Roadmap />} />
+          <Route path="calendar" element={<CalendarPage />} />
+          <Route path="timer" element={<TimerPage />} />
+          <Route path="flashcards" element={<FlashcardsPage />} />
+          <Route path="input" element={<InputLogPage />} />
+          <Route path="journal" element={<JournalPage />} />
+          <Route path="drills" element={<DrillsPage />} />
+          <Route path="patterns" element={<PatternsPage />} />
+          <Route path="accent" element={<AccentPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
+      </Routes>
+    </ToastProvider>
   )
 }
