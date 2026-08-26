@@ -3,7 +3,11 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vite'
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  // GitHub Pages serves this app from /english-mastery-app/, not the domain
+  // root — only apply that prefix for production builds so the local dev
+  // server still runs at "/".
+  base: command === 'build' ? '/english-mastery-app/' : '/',
   plugins: [
     react(),
     tailwindcss(),
@@ -17,11 +21,12 @@ export default defineConfig({
         theme_color: '#7c3aed',
         background_color: '#0b0b0f',
         display: 'standalone',
-        start_url: '/',
+        start_url: '.',
+        scope: '.',
         icons: [
-          { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
@@ -29,4 +34,4 @@ export default defineConfig({
       },
     }),
   ],
-})
+}))
