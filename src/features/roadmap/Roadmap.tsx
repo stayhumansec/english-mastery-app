@@ -1,9 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { v4 as uuid } from 'uuid'
+import { motion } from 'framer-motion'
 import { db } from '../../lib/db'
 import ProgressBar from '../../components/ProgressBar'
-import { CEFR_LEVELS, type CefrLevel, type ModuleStatus, type RoadmapModule } from '../../lib/types'
+import Confetti from '../../components/motion/Confetti'
+import { useToast } from '../../components/motion/ToastProvider'
+import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
+import { CEFR_LEVELS, LEVEL_COLORS, type CefrLevel, type ModuleStatus, type RoadmapModule } from '../../lib/types'
 import { Plus, Trash2 } from 'lucide-react'
 
 const STATUS_LABEL: Record<ModuleStatus, string> = {
@@ -22,6 +26,7 @@ function levelProgress(modules: RoadmapModule[]): number {
 export default function Roadmap() {
   const modules = useLiveQuery(() => db.modules.orderBy('order').toArray(), [])
   const [addingFor, setAddingFor] = useState<CefrLevel | null>(null)
+  const { showToast } = useToast()
 
   if (!modules) return <p className="text-sm text-[var(--text-muted)]">Loading…</p>
 
@@ -45,6 +50,7 @@ export default function Roadmap() {
 
   const updateModule = async (id: string, patch: Partial<RoadmapModule>) => {
     await db.modules.update(id, patch)
+    if (patch.status === 'done') showToast('Module complete — nice work!', '🎉')
   }
 
   const deleteModule = async (id: string) => {
@@ -64,38 +70,54 @@ export default function Roadmap() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">CEFR Roadmap</h1>
-        <p className="text-sm text-[var(--text-muted)]">A1 → C2 curriculum tracker</p>
+    <motion.div className="space-y-6" variants={staggerContainer} initial="hidden" animate="show">
+      <motion.div variants={fadeUpItem}>
+        <h1 className="text-2xl font-black">CEFR Roadmap 🗺️</h1>
+        <p className="text-sm font-medium text-[var(--text-muted)]">A1 → C2 curriculum tracker</p>
         <div className="mt-3 max-w-sm">
-          <ProgressBar value={overall} label="Overall progress" />
+          <ProgressBar value={overall} label="Overall progress" color="var(--accent)" thick />
         </div>
-      </div>
+      </motion.div>
 
       {CEFR_LEVELS.map((level) => {
         const levelModules = modules
           .filter((m) => m.level === level)
           .sort((a, b) => a.order - b.order)
+        const color = LEVEL_COLORS[level]
         return (
-          <section key={level} className="card p-4">
+          <motion.section
+            key={level}
+            variants={fadeUpItem}
+            className="card p-4"
+            style={{ borderLeft: `6px solid ${color}` }}
+          >
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="font-semibold">{level}</h2>
+              <div className="flex items-center gap-2">
+                <span
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-black text-white"
+                  style={{ background: color }}
+                >
+                  {level}
+                </span>
+                <h2 className="font-bold">Level {level}</h2>
+              </div>
               <button
                 onClick={() => setAddingFor(level)}
-                className="flex items-center gap-1 text-xs text-[var(--accent)] hover:underline"
+                className="flex items-center gap-1 text-xs font-bold hover:underline"
+                style={{ color }}
               >
                 <Plus size={14} /> Add module
               </button>
             </div>
             <div className="mb-3 max-w-sm">
-              <ProgressBar value={levelProgress(levelModules)} />
+              <ProgressBar value={levelProgress(levelModules)} color={color} thick />
             </div>
 
             {addingFor === level && (
               <AddModuleForm
                 onCancel={() => setAddingFor(null)}
                 onSubmit={(title) => addModule(level, title)}
+                color={color}
               />
             )}
 
@@ -104,28 +126,31 @@ export default function Roadmap() {
                 <ModuleRow
                   key={mod.id}
                   mod={mod}
+                  color={color}
                   onUpdate={(patch) => updateModule(mod.id, patch)}
                   onDelete={() => deleteModule(mod.id)}
                   onMove={(dir) => moveModule(mod, dir)}
                 />
               ))}
               {levelModules.length === 0 && (
-                <p className="text-sm text-[var(--text-muted)]">No modules yet.</p>
+                <p className="text-sm text-[var(--text-muted)]">No modules yet — add your first one above!</p>
               )}
             </div>
-          </section>
+          </motion.section>
         )
       })}
-    </div>
+    </motion.div>
   )
 }
 
 function AddModuleForm({
   onSubmit,
   onCancel,
+  color,
 }: {
   onSubmit: (title: string) => void
   onCancel: () => void
+  color: string
 }) {
   const [title, setTitle] = useState('')
   return (
@@ -141,9 +166,9 @@ function AddModuleForm({
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Module title"
-        className="flex-1 rounded-lg border border-[var(--border)] bg-transparent px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]"
+        className="flex-1 rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]"
       />
-      <button type="submit" className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm text-white">
+      <button type="submit" className="btn px-3 py-1.5 text-sm text-white" style={{ background: color }}>
         Add
       </button>
       <button type="button" onClick={onCancel} className="px-3 py-1.5 text-sm text-[var(--text-muted)]">
@@ -155,31 +180,46 @@ function AddModuleForm({
 
 function ModuleRow({
   mod,
+  color,
   onUpdate,
   onDelete,
   onMove,
 }: {
   mod: RoadmapModule
+  color: string
   onUpdate: (patch: Partial<RoadmapModule>) => void
   onDelete: () => void
   onMove: (dir: -1 | 1) => void
 }) {
   const [expanded, setExpanded] = useState(false)
+  const [burst, setBurst] = useState(0)
+
+  const handleStatusChange = (status: ModuleStatus) => {
+    if (status === 'done' && mod.status !== 'done') setBurst((b) => b + 1)
+    onUpdate({ status })
+  }
 
   return (
-    <div className="rounded-lg border border-[var(--border)] p-3">
+    <div
+      className="relative rounded-xl border-2 p-3 transition-colors"
+      style={{ borderColor: mod.status === 'done' ? color : 'var(--border)' }}
+    >
+      <Confetti trigger={burst} />
       <div className="flex items-center gap-2">
         <div className="flex flex-col">
-          <button onClick={() => onMove(-1)} className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)]">▲</button>
-          <button onClick={() => onMove(1)} className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)]">▼</button>
+          <button onClick={() => onMove(-1)} className="text-xs text-[var(--text-muted)] hover:text-[var(--text)]">▲</button>
+          <button onClick={() => onMove(1)} className="text-xs text-[var(--text-muted)] hover:text-[var(--text)]">▼</button>
         </div>
         <button className="flex-1 text-left" onClick={() => setExpanded((v) => !v)}>
-          <span className="font-medium">{mod.title}</span>
+          <span className={`font-semibold ${mod.status === 'done' ? 'line-through text-[var(--text-muted)]' : ''}`}>
+            {mod.title}
+          </span>
         </button>
         <select
           value={mod.status}
-          onChange={(e) => onUpdate({ status: e.target.value as ModuleStatus })}
-          className="rounded-lg border border-[var(--border)] bg-transparent px-2 py-1 text-xs"
+          onChange={(e) => handleStatusChange(e.target.value as ModuleStatus)}
+          className="rounded-full border-2 px-2 py-1 text-xs font-bold"
+          style={{ borderColor: color, color: mod.status === 'not_started' ? 'var(--text-muted)' : color }}
         >
           {Object.entries(STATUS_LABEL).map(([value, label]) => (
             <option key={value} value={value}>
@@ -199,14 +239,14 @@ function ModuleRow({
             onChange={(e) => onUpdate({ description: e.target.value })}
             placeholder="Description"
             rows={2}
-            className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]"
+            className="w-full rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]"
           />
           <textarea
             value={mod.notes}
             onChange={(e) => onUpdate({ notes: e.target.value })}
             placeholder="Notes / resource links"
             rows={2}
-            className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]"
+            className="w-full rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)]"
           />
         </div>
       )}
