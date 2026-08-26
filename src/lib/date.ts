@@ -20,6 +20,15 @@ export function isBeforeOrToday(iso: string): boolean {
   return iso <= todayIso()
 }
 
+/** The Monday (as an ISO date) of the week containing the given ISO date. */
+export function startOfWeekIso(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  const dayNum = (date.getDay() + 6) % 7 // Monday = 0
+  date.setDate(date.getDate() - dayNum)
+  return toIso(date)
+}
+
 /** ISO-8601-ish "YYYY-Www" week key (Monday-start weeks), used to key the
  * once-per-week rotating practical focus. */
 export function isoWeekKey(date: Date = new Date()): string {
