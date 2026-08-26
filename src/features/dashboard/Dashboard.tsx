@@ -1,15 +1,19 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { db } from '../../lib/db'
 import { todayIso } from '../../lib/date'
 import { computeStreak } from '../../lib/streak'
 import { expandOccurrences } from '../calendar/occurrences'
 import ProgressBar from '../../components/ProgressBar'
 import PatternText from '../../components/PatternText'
+import AnimatedNumber from '../../components/motion/AnimatedNumber'
+import Confetti from '../../components/motion/Confetti'
+import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
 import { ensureWeeklyFocus, patternsForModule } from '../../lib/weeklyFocus'
-import { CATEGORY_COLORS, type ActivityCategory } from '../../lib/types'
-import { BookOpen, Layers, Mic, PenLine, Sparkles, Timer } from 'lucide-react'
+import { CATEGORY_COLORS, FEATURE_COLORS, type ActivityCategory } from '../../lib/types'
+import { BookOpen, Check, Flame, Layers, Mic, PenLine, Sparkles, Timer } from 'lucide-react'
 
 export default function Dashboard() {
   const modules = useLiveQuery(() => db.modules.toArray(), [])
@@ -82,100 +86,184 @@ export default function Dashboard() {
   const focusPatterns = weeklyFocusModule && patterns ? patternsForModule(weeklyFocusModule, patterns) : []
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Welcome back</h1>
-        <p className="text-sm text-[var(--text-muted)]">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-      </div>
+    <motion.div className="space-y-6" variants={staggerContainer} initial="hidden" animate="show">
+      <motion.div variants={fadeUpItem}>
+        <h1 className="text-2xl font-black">Welcome back 👋</h1>
+        <p className="text-sm font-medium text-[var(--text-muted)]">
+          {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+        </p>
+      </motion.div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="card p-4 text-center">
-          <p className="text-3xl font-semibold text-[var(--accent)]">{streak}</p>
-          <p className="text-xs text-[var(--text-muted)]">day streak</p>
-        </div>
-        <div className="card p-4 text-center">
-          <p className="text-3xl font-semibold text-[var(--accent)]">{dueFlashcards}</p>
-          <p className="text-xs text-[var(--text-muted)]">flashcards due</p>
-        </div>
-        <div className="card p-4 text-center">
-          <p className="text-3xl font-semibold text-[var(--accent)]">{todaysSessions.length}</p>
-          <p className="text-xs text-[var(--text-muted)]">sessions today</p>
-        </div>
-      </div>
+      <motion.div variants={fadeUpItem} className="grid gap-3 sm:grid-cols-3">
+        <StatTile
+          value={streak}
+          label="day streak"
+          icon={Flame}
+          color="var(--orange)"
+          bg="var(--orange-soft)"
+        />
+        <StatTile
+          value={dueFlashcards}
+          label="flashcards due"
+          icon={Layers}
+          color="var(--purple)"
+          bg="var(--purple-soft)"
+        />
+        <StatTile
+          value={todaysSessions.length}
+          label="sessions today"
+          icon={Timer}
+          color="var(--blue)"
+          bg="var(--blue-soft)"
+        />
+      </motion.div>
 
-      <div className="flex flex-wrap gap-3">
-        <Link to="/timer" className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white">
+      <motion.div variants={fadeUpItem} className="flex flex-wrap gap-3">
+        <Link to="/timer" className="btn btn-primary px-4 py-2 text-sm">
           <Timer size={16} /> Start Timer
         </Link>
-        <Link to="/flashcards" className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium">
+        <Link to="/flashcards" className="btn btn-secondary px-4 py-2 text-sm">
           <Layers size={16} /> Review Flashcards
         </Link>
-        <Link to="/accent" className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium">
+        <Link to="/accent" className="btn btn-secondary px-4 py-2 text-sm">
           <Mic size={16} /> Log Accent Practice
         </Link>
-      </div>
+      </motion.div>
 
       {weeklyFocusModule && (
-        <section className="card space-y-3 p-4">
+        <motion.section variants={fadeUpItem} className="card space-y-3 p-4">
           <div className="flex items-center gap-2">
-            <Sparkles size={16} className="text-[var(--accent)]" />
-            <h2 className="font-medium">This week's practical focus: {weeklyFocusModule.title}</h2>
+            <Sparkles size={18} style={{ color: 'var(--purple)' }} />
+            <h2 className="font-bold">This week's practical focus: {weeklyFocusModule.title}</h2>
           </div>
           {weeklyFocusModule.description && <p className="text-sm text-[var(--text-muted)]">{weeklyFocusModule.description}</p>}
           {focusPatterns.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Related patterns</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Related patterns</p>
               {focusPatterns.map((p) => (
-                <Link key={p.id} to="/patterns" className="block rounded-lg border border-[var(--border)] p-2 text-sm hover:border-[var(--accent)]">
-                  <span className="font-medium">{p.name}</span>{' '}
+                <Link
+                  key={p.id}
+                  to="/patterns"
+                  className="block rounded-xl border-2 border-[var(--border)] p-2 text-sm transition-colors hover:border-[var(--purple)]"
+                >
+                  <span className="font-bold">{p.name}</span>{' '}
                   <PatternText segments={p.structureTemplate} />
                 </Link>
               ))}
             </div>
           )}
-        </section>
+        </motion.section>
       )}
 
-      <section className="card p-4">
-        <h2 className="mb-3 font-medium">Today's practice checklist</h2>
+      <motion.section variants={fadeUpItem} className="card p-4">
+        <h2 className="mb-3 font-bold">Today's practice checklist</h2>
         <div className="grid gap-2 sm:grid-cols-2">
-          <ChecklistItem to="/input" icon={BookOpen} label="Comprehensible input" done={inputLoggedToday} />
-          <ChecklistItem to="/journal" icon={PenLine} label="Writing journal" done={journalDoneToday} />
-          <ChecklistItem to="/drills" icon={Sparkles} label="Sentence production drill" done={drillDoneToday} />
+          <ChecklistItem to="/input" icon={BookOpen} label="Comprehensible input" done={inputLoggedToday} feature="input" />
+          <ChecklistItem to="/journal" icon={PenLine} label="Writing journal" done={journalDoneToday} feature="journal" />
+          <ChecklistItem to="/drills" icon={Sparkles} label="Sentence production drill" done={drillDoneToday} feature="drills" />
           <ChecklistItem
             to="/accent"
             icon={Mic}
             label={todaysScenarioPrompt ? `Speaking prompt: ${todaysScenarioPrompt.prompt}` : 'Speaking practice'}
             done={!todaysScenarioPrompt}
+            feature="accent"
           />
         </div>
-      </section>
+      </motion.section>
 
-      <section className="card p-4">
-        <h2 className="mb-3 font-medium">Today's sessions</h2>
-        {todaysSessions.length === 0 && <p className="text-sm text-[var(--text-muted)]">Nothing scheduled today.</p>}
+      <motion.section variants={fadeUpItem} className="card p-4">
+        <h2 className="mb-3 font-bold">Today's sessions</h2>
+        {todaysSessions.length === 0 && (
+          <p className="text-sm text-[var(--text-muted)]">
+            🌱 Nothing scheduled today — add one on the Calendar to keep your streak going!
+          </p>
+        )}
         <div className="space-y-2">
           {todaysSessions.map((occ) => (
-            <label key={`${occ.session.id}-${occ.date}`} className="flex items-center gap-3 rounded-lg border border-[var(--border)] px-3 py-2 text-sm">
-              <input
-                type="checkbox"
-                checked={occ.completed}
-                onChange={() => toggleSessionDone(occ.session.id, occ.date)}
-              />
-              <span className="h-2 w-2 rounded-full" style={{ background: CATEGORY_COLORS[occ.session.category as ActivityCategory] }} />
-              <span className={occ.completed ? 'line-through text-[var(--text-muted)]' : ''}>
-                {occ.session.startTime} — {occ.session.title}
-              </span>
-            </label>
+            <SessionRow
+              key={`${occ.session.id}-${occ.date}`}
+              title={occ.session.title}
+              time={occ.session.startTime}
+              color={CATEGORY_COLORS[occ.session.category as ActivityCategory]}
+              completed={occ.completed}
+              onToggle={() => toggleSessionDone(occ.session.id, occ.date)}
+            />
           ))}
         </div>
-      </section>
+      </motion.section>
 
-      <section className="card max-w-sm p-4">
-        <h2 className="mb-2 font-medium">Overall CEFR progress</h2>
-        <ProgressBar value={overallProgress} />
-      </section>
+      <motion.section variants={fadeUpItem} className="card max-w-sm p-4">
+        <h2 className="mb-2 font-bold">Overall CEFR progress</h2>
+        <ProgressBar value={overallProgress} color="var(--accent)" thick />
+      </motion.section>
+    </motion.div>
+  )
+}
+
+function StatTile({
+  value,
+  label,
+  icon: Icon,
+  color,
+  bg,
+}: {
+  value: number
+  label: string
+  icon: typeof Flame
+  color: string
+  bg: string
+}) {
+  return (
+    <div className="card flex flex-col items-center gap-1 p-4 text-center" style={{ background: bg, borderColor: 'transparent' }}>
+      <Icon size={22} style={{ color }} />
+      <AnimatedNumber value={value} className="text-3xl font-black" />
+      <p className="text-xs font-bold" style={{ color }}>{label}</p>
     </div>
+  )
+}
+
+function SessionRow({
+  title,
+  time,
+  color,
+  completed,
+  onToggle,
+}: {
+  title: string
+  time: string
+  color: string
+  completed: boolean
+  onToggle: () => void
+}) {
+  const [burst, setBurst] = useState(0)
+
+  const handleToggle = () => {
+    if (!completed) setBurst((b) => b + 1)
+    onToggle()
+  }
+
+  return (
+    <label className="relative flex items-center gap-3 rounded-xl border-2 border-[var(--border)] px-3 py-2 text-sm">
+      <Confetti trigger={burst} />
+      <button
+        type="button"
+        onClick={handleToggle}
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2"
+        style={{ borderColor: completed ? color : 'var(--border)', background: completed ? color : 'transparent' }}
+      >
+        <motion.span
+          initial={false}
+          animate={{ scale: completed ? 1 : 0 }}
+          transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+        >
+          <Check size={14} className="text-white" strokeWidth={3} />
+        </motion.span>
+      </button>
+      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color }} />
+      <span className={completed ? 'text-[var(--text-muted)] line-through' : ''}>
+        {time} — {title}
+      </span>
+    </label>
   )
 }
 
@@ -184,22 +272,46 @@ function ChecklistItem({
   icon: Icon,
   label,
   done,
+  feature,
 }: {
   to: string
   icon: typeof Mic
   label: string
   done: boolean
+  feature: keyof typeof FEATURE_COLORS
 }) {
+  const color = FEATURE_COLORS[feature]
+  const wasDone = useRef(done)
+  const [celebrate, setCelebrate] = useState(0)
+
+  useEffect(() => {
+    if (done && !wasDone.current) setCelebrate((c) => c + 1)
+    wasDone.current = done
+  }, [done])
+
   return (
     <Link
       to={to}
-      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
-        done ? 'border-[var(--border)] text-[var(--text-muted)]' : 'border-[var(--accent)] text-[var(--text)]'
-      }`}
+      className="relative flex items-center gap-2 rounded-xl border-2 px-3 py-2 text-sm transition-colors"
+      style={{ borderColor: done ? 'var(--border)' : color }}
     >
-      <Icon size={16} className={done ? 'text-[var(--text-muted)]' : 'text-[var(--accent)]'} />
-      <span className={done ? 'line-through' : ''}>{label}</span>
-      {done && <span className="ml-auto text-xs">done</span>}
+      <Confetti trigger={celebrate} />
+      <Icon size={16} style={{ color: done ? 'var(--text-muted)' : color }} />
+      <span className={done ? 'text-[var(--text-muted)] line-through' : 'font-semibold'}>{label}</span>
+      <AnimatePresence>
+        {done && (
+          <motion.span
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+            className="ml-auto flex h-5 w-5 items-center justify-center rounded-full"
+            style={{ background: 'var(--accent)' }}
+          >
+            <Check size={12} className="text-white" strokeWidth={3} />
+          </motion.span>
+        )}
+      </AnimatePresence>
     </Link>
   )
 }
