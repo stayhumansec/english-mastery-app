@@ -3,8 +3,13 @@ import type {
   AccentLog,
   AppSettings,
   CalendarSession,
+  DrillAttempt,
   Flashcard,
+  InputLogEntry,
+  JournalEntry,
+  Pattern,
   RoadmapModule,
+  ScenarioPrompt,
   TimerLog,
 } from './types'
 
@@ -15,6 +20,11 @@ export class EnglishMasteryDB extends Dexie {
   flashcards!: Table<Flashcard, string>
   accentLogs!: Table<AccentLog, string>
   settings!: Table<AppSettings, string>
+  inputLogs!: Table<InputLogEntry, string>
+  journalEntries!: Table<JournalEntry, string>
+  scenarioPrompts!: Table<ScenarioPrompt, string>
+  drillAttempts!: Table<DrillAttempt, string>
+  patterns!: Table<Pattern, string>
 
   constructor() {
     super('english-mastery-db')
@@ -25,6 +35,19 @@ export class EnglishMasteryDB extends Dexie {
       flashcards: 'id, deck, level, dueDate',
       accentLogs: 'id, date, createdAt',
       settings: 'id',
+    })
+    this.version(2).stores({
+      modules: 'id, level, order, status',
+      sessions: 'id, date, category',
+      timerLogs: 'id, date, category, createdAt',
+      flashcards: 'id, deck, level, dueDate, patternId',
+      accentLogs: 'id, date, createdAt',
+      settings: 'id',
+      inputLogs: 'id, date',
+      journalEntries: 'id, date',
+      scenarioPrompts: 'id, level, category',
+      drillAttempts: 'id, date, confidence, patternId',
+      patterns: 'id, level, category',
     })
   }
 }

@@ -20,6 +20,19 @@ export function isBeforeOrToday(iso: string): boolean {
   return iso <= todayIso()
 }
 
+/** ISO-8601-ish "YYYY-Www" week key (Monday-start weeks), used to key the
+ * once-per-week rotating practical focus. */
+export function isoWeekKey(date: Date = new Date()): string {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const dayNum = (d.getUTCDay() + 6) % 7 // Monday = 0
+  d.setUTCDate(d.getUTCDate() - dayNum + 3) // nearest Thursday
+  const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4))
+  const firstThursdayDayNum = (firstThursday.getUTCDay() + 6) % 7
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstThursdayDayNum + 3)
+  const week = 1 + Math.round((d.getTime() - firstThursday.getTime()) / (7 * 86400000))
+  return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`
+}
+
 export function formatNice(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number)
   const date = new Date(y, m - 1, d)

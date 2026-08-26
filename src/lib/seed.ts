@@ -1,7 +1,9 @@
 import { v4 as uuid } from 'uuid'
 import { db } from './db'
 import { newCardScheduleDefaults } from './sm2'
-import type { CefrLevel, DeckName, Flashcard, RoadmapModule } from './types'
+import { PATTERN_SEED } from './patternSeed'
+import { SCENARIO_PROMPT_SEED } from './scenarioSeed'
+import type { CefrLevel, DeckName, Flashcard, Pattern, RoadmapModule, ScenarioPrompt } from './types'
 
 const ROADMAP_SEED: Array<[CefrLevel, Array<[string, string]>]> = [
   [
@@ -60,7 +62,12 @@ const ROADMAP_SEED: Array<[CefrLevel, Array<[string, string]>]> = [
   ],
 ]
 
-const FLASHCARD_SEED: Array<Omit<Flashcard, 'id' | 'createdAt' | keyof ReturnType<typeof newCardScheduleDefaults>>> = [
+type FlashcardSeedEntry = Omit<
+  Flashcard,
+  'id' | 'createdAt' | 'patternId' | keyof ReturnType<typeof newCardScheduleDefaults>
+> & { linkPatternName?: string }
+
+const FLASHCARD_SEED: FlashcardSeedEntry[] = [
   // Everyday Vocabulary
   { deck: 'Everyday Vocabulary', level: 'A1', front: 'errand', back: 'a short trip to do a specific task', example: 'I need to run a few errands before lunch.', tags: ['noun'] },
   { deck: 'Everyday Vocabulary', level: 'A2', front: 'commute', back: 'to travel regularly to and from work', example: 'She commutes to the city by train every day.', tags: ['verb'] },
@@ -82,6 +89,9 @@ const FLASHCARD_SEED: Array<Omit<Flashcard, 'id' | 'createdAt' | keyof ReturnTyp
   // Sentence Patterns
   { deck: 'Sentence Patterns', level: 'A2', front: 'It takes ___ (time) to ___', back: 'pattern for describing duration of an action', example: 'It takes twenty minutes to walk there.', tags: ['pattern'] },
   { deck: 'Sentence Patterns', level: 'B1', front: 'I used to ___', back: 'pattern for past habits that no longer happen', example: 'I used to play tennis every weekend.', tags: ['pattern'] },
+  { deck: 'Sentence Patterns', level: 'B1', front: 'have/has + past participle + since/for', back: 'Present Perfect for something that started in the past and continues now', example: 'I have lived here for three years.', tags: ['grammar-in-context'], linkPatternName: 'Present Perfect for unfinished time' },
+  { deck: 'Sentence Patterns', level: 'B1', front: 'If + present simple, ... will + verb', back: 'First Conditional — a real, likely future possibility', example: 'If it rains, we will stay home.', tags: ['grammar-in-context'], linkPatternName: 'First Conditional (real future possibility)' },
+  { deck: 'Sentence Patterns', level: 'B2', front: 'If + past simple, ... would + verb', back: 'Second Conditional — a hypothetical present situation', example: 'If I had more time, I would travel more.', tags: ['grammar-in-context'], linkPatternName: 'Second Conditional (hypothetical present)' },
   // Collocations
   { deck: 'Collocations', level: 'B1', front: 'make a decision', back: 'not "take" — the correct collocation with decision', example: 'We need to make a decision by Friday.', tags: ['collocation'] },
   { deck: 'Collocations', level: 'B2', front: 'heavy traffic', back: '"heavy", not "big/strong", collocates with traffic', example: 'There was heavy traffic on the way home.', tags: ['collocation'] },
@@ -91,11 +101,20 @@ export async function seedIfEmpty(): Promise<void> {
   // Run as a single transaction so two concurrent calls (e.g. React
   // StrictMode's double-invoked effect in dev) can't both observe an empty
   // table and double-insert the seed data.
-  await db.transaction('rw', db.modules, db.flashcards, db.settings, async () => {
-    const [moduleCount, flashcardCount, settings] = await Promise.all([
+  await db.transaction(
+    'rw',
+    db.modules,
+    db.flashcards,
+    db.settings,
+    db.patterns,
+    db.scenarioPrompts,
+    async () => {
+    const [moduleCount, flashcardCount, settings, patternCount, promptCount] = await Promise.all([
       db.modules.count(),
       db.flashcards.count(),
       db.settings.get('app'),
+      db.patterns.count(),
+      db.scenarioPrompts.count(),
     ])
 
     if (moduleCount === 0) {
@@ -118,13 +137,20 @@ export async function seedIfEmpty(): Promise<void> {
       await db.modules.bulkAdd(modules)
     }
 
+    const patternIdByName = new Map<string, string>()
+    for (const p of PATTERN_SEED) patternIdByName.set(p.name, uuid())
+
     if (flashcardCount === 0) {
-      const cards: Flashcard[] = FLASHCARD_SEED.map((c) => ({
-        ...c,
-        id: uuid(),
-        createdAt: Date.now(),
-        ...newCardScheduleDefaults(),
-      }))
+      const cards: Flashcard[] = FLASHCARD_SEED.map((c) => {
+        const { linkPatternName, ...rest } = c
+        return {
+          ...rest,
+          id: uuid(),
+          createdAt: Date.now(),
+          patternId: linkPatternName ? patternIdByName.get(linkPatternName) : undefined,
+          ...newCardScheduleDefaults(),
+        }
+      })
       await db.flashcards.bulkAdd(cards)
     }
 
@@ -140,6 +166,23 @@ export async function seedIfEmpty(): Promise<void> {
         breakWorkMinutes: 25,
         breakDurationMinutes: 5,
       })
+    }
+
+    if (patternCount === 0) {
+      const patterns: Pattern[] = PATTERN_SEED.map((p) => ({
+        ...p,
+        id: patternIdByName.get(p.name)!,
+        createdAt: Date.now(),
+      }))
+      await db.patterns.bulkAdd(patterns)
+    }
+
+    if (promptCount === 0) {
+      const prompts: ScenarioPrompt[] = SCENARIO_PROMPT_SEED.map((p) => ({
+        ...p,
+        id: uuid(),
+      }))
+      await db.scenarioPrompts.bulkAdd(prompts)
     }
   })
 }
