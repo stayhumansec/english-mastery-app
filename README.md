@@ -7,9 +7,16 @@ backend, no accounts, and no cloud sync.
 
 ## Features
 
-- **CEFR Roadmap** — an editable A1→C2 curriculum tracker. Add, edit, reorder
-  and mark modules as not started / in progress / done, with per-level and
-  overall progress bars.
+- **CEFR Roadmap** — an editable A1→C2 curriculum tracker. Modules with
+  written lesson content (all of A1 so far) open into a full guided lesson:
+  a plain-language concept explanation, tagged examples, a "watch out for
+  this" mistakes list, in-context practice (linked flashcards, a Sentence
+  Production Drill, an embedded Spot the Pattern warm-up), and a mini-quiz —
+  a lesson-backed module can only be marked done after passing its quiz
+  (70%+). Modules within a level are lightly sequenced, with a "recommended
+  after X" indicator. Modules without lesson content yet fall back to a
+  "coming soon" shell with the original manual status dropdown. Per-level
+  and overall progress bars throughout.
 - **Calendar** — month/week/day scheduling for study sessions, color-coded by
   activity type, with daily/weekday/weekly recurrence and one-tap completion.
 - **Study Timer** — a configurable hours + minutes timer with start / pause /
@@ -43,9 +50,10 @@ backend, no accounts, and no cloud sync.
 - **Weekly Practical Skill Focus** — rotates through your in-progress
   roadmap modules to spotlight one practical focus per week, with related
   Pattern Library entries surfaced on the dashboard.
-- **Dashboard** — a daily practice checklist (input log, journal, sentence
-  drill, today's speaking prompt), flashcards due, today's scheduled
-  sessions, current streak, and overall CEFR progress.
+- **Dashboard** — a "Continue learning" quick-action that always points at
+  your next not-done lesson, a daily practice checklist (input log, journal,
+  sentence drill, today's speaking prompt), flashcards due, today's
+  scheduled sessions, current streak, and overall CEFR progress.
 - **Reminders** — optional browser notifications for scheduled study times
   and an end-of-day nudge if nothing has been logged yet.
 - Installable **PWA** that works offline.
