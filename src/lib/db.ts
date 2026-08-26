@@ -43,10 +43,10 @@ export class EnglishMasteryDB extends Dexie {
       flashcards: 'id, deck, level, dueDate, patternId',
       accentLogs: 'id, date, createdAt',
       settings: 'id',
-      inputLogs: 'id, date',
-      journalEntries: 'id, date',
+      inputLogs: 'id, date, createdAt',
+      journalEntries: 'id, date, createdAt',
       scenarioPrompts: 'id, level, category',
-      drillAttempts: 'id, date, confidence, patternId',
+      drillAttempts: 'id, date, confidence, patternId, createdAt',
       patterns: 'id, level, category',
     })
   }

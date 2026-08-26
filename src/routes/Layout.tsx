@@ -1,11 +1,14 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import {
+  BookOpen,
   CalendarDays,
   Home,
   Layers,
   Map,
   Mic,
+  PenLine,
   Settings,
+  Sparkles,
   Timer,
 } from 'lucide-react'
 
@@ -15,7 +18,11 @@ const NAV_ITEMS = [
   { to: '/calendar', label: 'Calendar', icon: CalendarDays },
   { to: '/timer', label: 'Timer', icon: Timer },
   { to: '/flashcards', label: 'Flashcards', icon: Layers },
-  { to: '/accent', label: 'Accent', icon: Mic },
+  { to: '/input', label: 'Input Log', icon: BookOpen },
+  { to: '/journal', label: 'Journal', icon: PenLine },
+  { to: '/drills', label: 'Drills', icon: Sparkles },
+  { to: '/patterns', label: 'Patterns', icon: Sparkles },
+  { to: '/accent', label: 'Speaking', icon: Mic },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
 
@@ -47,14 +54,14 @@ export default function Layout() {
         <Outlet />
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-10 flex justify-around border-t border-[var(--border)] bg-[var(--surface)] py-1.5 md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-10 flex gap-1 overflow-x-auto border-t border-[var(--border)] bg-[var(--surface)] px-1 py-1.5 md:hidden">
         {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
             end={end}
             className={({ isActive }) =>
-              `flex flex-col items-center gap-0.5 rounded-lg px-2 py-1 text-[10px] ${
+              `flex shrink-0 flex-col items-center gap-0.5 rounded-lg px-2.5 py-1 text-[10px] whitespace-nowrap ${
                 isActive ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'
               }`
             }
