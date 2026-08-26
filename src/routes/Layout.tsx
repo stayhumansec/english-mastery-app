@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { FEATURE_COLORS, type FeatureKey } from '../lib/types'
 import PageTransition from '../components/motion/PageTransition'
+import IconBadge from '../components/IconBadge'
 
 const NAV_ITEMS: Array<{ to: string; label: string; icon: typeof Home; end?: boolean; feature: FeatureKey }> = [
   { to: '/', label: 'Home', icon: Home, end: true, feature: 'home' },
@@ -33,14 +34,14 @@ export default function Layout() {
   return (
     <div className="mx-auto flex min-h-screen max-w-6xl flex-col md:flex-row">
       <nav className="hidden shrink-0 flex-col gap-1 border-r border-[var(--border)] bg-[var(--surface)] p-4 md:flex md:w-56">
-        <div className="mb-4 px-2 text-lg font-black text-[var(--text)]">
+        <div className="font-display mb-4 px-2 text-lg font-black text-[var(--text)]">
           English <span style={{ color: 'var(--accent)' }}>Mastery</span>
         </div>
         {NAV_ITEMS.map(({ to, label, icon: Icon, end, feature }) => (
           <NavLink key={to} to={to} end={end} className="relative">
             {({ isActive }) => (
               <span
-                className={`relative flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition-colors ${
+                className={`relative flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-3 text-sm font-semibold transition-colors ${
                   isActive ? 'text-[var(--text)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
                 }`}
               >
@@ -48,11 +49,13 @@ export default function Layout() {
                   <motion.span
                     layoutId="nav-pill-desktop"
                     className="absolute inset-0 rounded-full"
-                    style={{ background: `${FEATURE_COLORS[feature]}22` }}
+                    style={{ background: `${FEATURE_COLORS[feature]}1a` }}
                     transition={{ type: 'spring', stiffness: 400, damping: 32 }}
                   />
                 )}
-                <Icon size={18} className="relative" style={{ color: FEATURE_COLORS[feature] }} />
+                <span className="relative">
+                  <IconBadge icon={Icon} color={FEATURE_COLORS[feature]} size={26} />
+                </span>
                 <span className="relative">{label}</span>
               </span>
             )}
@@ -77,11 +80,13 @@ export default function Layout() {
                   <motion.span
                     layoutId="nav-pill-mobile"
                     className="absolute inset-0 rounded-2xl"
-                    style={{ background: `${FEATURE_COLORS[feature]}22` }}
+                    style={{ background: `${FEATURE_COLORS[feature]}1a` }}
                     transition={{ type: 'spring', stiffness: 400, damping: 32 }}
                   />
                 )}
-                <Icon size={20} className="relative" style={{ color: FEATURE_COLORS[feature] }} />
+                <span className="relative">
+                  <IconBadge icon={Icon} color={FEATURE_COLORS[feature]} size={24} />
+                </span>
                 <span className="relative">{label}</span>
               </span>
             )}

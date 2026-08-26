@@ -8,6 +8,7 @@ import { computeStreak } from '../../lib/streak'
 import { expandOccurrences } from '../calendar/occurrences'
 import ProgressBar from '../../components/ProgressBar'
 import PatternText from '../../components/PatternText'
+import IconBadge from '../../components/IconBadge'
 import AnimatedNumber from '../../components/motion/AnimatedNumber'
 import Confetti from '../../components/motion/Confetti'
 import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
@@ -87,7 +88,11 @@ export default function Dashboard() {
 
   return (
     <motion.div className="space-y-6" variants={staggerContainer} initial="hidden" animate="show">
-      <motion.div variants={fadeUpItem}>
+      <motion.div
+        variants={fadeUpItem}
+        className="rounded-2xl p-5"
+        style={{ backgroundImage: 'linear-gradient(120deg, var(--accent-soft), var(--blue-soft) 50%, var(--purple-soft))' }}
+      >
         <h1 className="text-2xl font-black">Welcome back 👋</h1>
         <p className="text-sm font-medium text-[var(--text-muted)]">
           {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -131,9 +136,13 @@ export default function Dashboard() {
       </motion.div>
 
       {weeklyFocusModule && (
-        <motion.section variants={fadeUpItem} className="card space-y-3 p-4">
+        <motion.section
+          variants={fadeUpItem}
+          className="card space-y-3 p-4"
+          style={{ background: 'var(--purple-soft)', borderColor: 'transparent' }}
+        >
           <div className="flex items-center gap-2">
-            <Sparkles size={18} style={{ color: 'var(--purple)' }} />
+            <IconBadge icon={Sparkles} color="var(--purple)" size={32} />
             <h2 className="font-bold">This week's practical focus: {weeklyFocusModule.title}</h2>
           </div>
           {weeklyFocusModule.description && <p className="text-sm text-[var(--text-muted)]">{weeklyFocusModule.description}</p>}
@@ -194,7 +203,7 @@ export default function Dashboard() {
 
       <motion.section variants={fadeUpItem} className="card max-w-sm p-4">
         <h2 className="mb-2 font-bold">Overall CEFR progress</h2>
-        <ProgressBar value={overallProgress} color="var(--accent)" thick />
+        <ProgressBar value={overallProgress} thick gradient />
       </motion.section>
     </motion.div>
   )
@@ -214,11 +223,15 @@ function StatTile({
   bg: string
 }) {
   return (
-    <div className="card flex flex-col items-center gap-1 p-4 text-center" style={{ background: bg, borderColor: 'transparent' }}>
-      <Icon size={22} style={{ color }} />
-      <AnimatedNumber value={value} className="text-3xl font-black" />
+    <motion.div
+      whileHover={{ y: -3 }}
+      className="flex flex-col items-center gap-2 rounded-2xl p-4 text-center"
+      style={{ background: bg, boxShadow: `0 8px 20px -6px ${color}66` }}
+    >
+      <IconBadge icon={Icon} color={color} size={44} />
+      <AnimatedNumber value={value} className="font-display text-3xl font-black" />
       <p className="text-xs font-bold" style={{ color }}>{label}</p>
-    </div>
+    </motion.div>
   )
 }
 
@@ -292,11 +305,11 @@ function ChecklistItem({
   return (
     <Link
       to={to}
-      className="relative flex items-center gap-2 rounded-xl border-2 px-3 py-2 text-sm transition-colors"
-      style={{ borderColor: done ? 'var(--border)' : color }}
+      className="relative flex items-center gap-3 rounded-xl border-2 px-3 py-2 text-sm transition-colors"
+      style={{ borderColor: done ? 'var(--border)' : color, boxShadow: done ? 'none' : `0 3px 0 ${color}` }}
     >
       <Confetti trigger={celebrate} />
-      <Icon size={16} style={{ color: done ? 'var(--text-muted)' : color }} />
+      <IconBadge icon={Icon} color={done ? 'var(--text-muted)' : color} size={30} />
       <span className={done ? 'text-[var(--text-muted)] line-through' : 'font-semibold'}>{label}</span>
       <AnimatePresence>
         {done && (

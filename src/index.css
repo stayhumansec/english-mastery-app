@@ -28,6 +28,7 @@
   --yellow-soft: #fef9c3;
 
   --font-sans: 'Nunito', ui-rounded, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Poppins', ui-rounded, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --shadow-card: 0 2px 10px rgba(31, 36, 48, 0.06);
   --shadow-pop: 0 8px 24px rgba(31, 36, 48, 0.12);
 }
@@ -53,8 +54,13 @@ body {
 h1,
 h2,
 h3 {
+  font-family: var(--font-display);
   font-weight: 800;
   letter-spacing: -0.01em;
+}
+
+.font-display {
+  font-family: var(--font-display);
 }
 
 .card {
@@ -64,24 +70,29 @@ h3 {
   box-shadow: var(--shadow-card);
 }
 
-/* Pressable, bouncy buttons — a pure-CSS squash/bounce so every button in
-   the app gets tactile feedback without needing a JS wrapper. */
+/* Pressable, "game button" style — a bottom-offset shadow that flattens
+   and the button drops into it on press, plus a bouncy squash. Works over
+   any inline background color since the shadow is a neutral dark tint. */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   border-radius: 999px;
+  font-family: var(--font-display);
   font-weight: 700;
+  transform: translateY(0);
   transition: transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 150ms ease, filter 150ms ease;
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.17), var(--shadow-card);
 }
 .btn:hover {
   filter: brightness(1.04);
-  box-shadow: var(--shadow-pop);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.17), var(--shadow-pop);
 }
 .btn:active {
-  transform: scale(0.94);
+  transform: translateY(3px) scale(0.97);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.17), var(--shadow-card);
 }
 .btn-primary {
   background: var(--accent);
@@ -91,11 +102,24 @@ h3 {
   background: var(--surface);
   border: 2px solid var(--border);
   color: var(--text);
-  box-shadow: none;
+  box-shadow: 0 3px 0 var(--border);
 }
 .btn-secondary:hover {
   border-color: var(--accent);
-  box-shadow: none;
+  box-shadow: 0 4px 0 var(--border), var(--shadow-pop);
+}
+.btn-secondary:active {
+  box-shadow: 0 1px 0 var(--border);
+}
+
+/* Colorful circular icon chip — used for stat tiles, checklist items and
+   nav icons so icons read as bold filled shapes, not thin outlines. */
+.icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  flex-shrink: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

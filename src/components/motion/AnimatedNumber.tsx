@@ -4,9 +4,12 @@ import { motion } from 'framer-motion'
 
 export default function AnimatedNumber({ value, className }: { value: number; className?: string }) {
   const prefersReduced = useReducedMotion()
-  const motionValue = useMotionValue(value)
+  // Start from 0 so the very first render counts up to `value` instead of
+  // appearing already-filled — later value changes animate incrementally
+  // from whatever the number last settled on.
+  const motionValue = useMotionValue(0)
   const rounded = useTransform(motionValue, (v) => Math.round(v).toLocaleString())
-  const prevValue = useRef(value)
+  const prevValue = useRef(0)
 
   useEffect(() => {
     if (prefersReduced) {
