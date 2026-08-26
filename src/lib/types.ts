@@ -2,6 +2,48 @@ export type CefrLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2'
 
 export const CEFR_LEVELS: CefrLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
 
+/** One bright, distinct color per CEFR level — reused for level badges,
+ * roadmap section accents, and progress bars so a level reads the same
+ * color everywhere in the app. */
+export const LEVEL_COLORS: Record<CefrLevel, string> = {
+  A1: '#22c55e', // green
+  A2: '#14b8a6', // teal
+  B1: '#3b82f6', // blue
+  B2: '#a855f7', // purple
+  C1: '#f97316', // orange
+  C2: '#ec4899', // pink
+}
+
+/** One bright, distinct color per feature/nav destination, used for
+ * sidebar icons, dashboard tiles and section accents so navigation feels
+ * colorful and consistent at a glance. */
+export type FeatureKey =
+  | 'home'
+  | 'roadmap'
+  | 'calendar'
+  | 'timer'
+  | 'flashcards'
+  | 'input'
+  | 'journal'
+  | 'drills'
+  | 'patterns'
+  | 'accent'
+  | 'settings'
+
+export const FEATURE_COLORS: Record<FeatureKey, string> = {
+  home: '#22c55e',
+  roadmap: '#22c55e',
+  calendar: '#3b82f6',
+  timer: '#f97316',
+  flashcards: '#f97316',
+  input: '#14b8a6',
+  journal: '#3b82f6',
+  drills: '#a855f7',
+  patterns: '#a855f7',
+  accent: '#ec4899',
+  settings: '#6b7280',
+}
+
 export type ModuleStatus = 'not_started' | 'in_progress' | 'done'
 
 export interface RoadmapModule {
@@ -37,12 +79,12 @@ export const ACTIVITY_CATEGORIES: ActivityCategory[] = [
 ]
 
 export const CATEGORY_COLORS: Record<ActivityCategory, string> = {
-  Grammar: '#3b82f6',
+  Grammar: '#a855f7',
   Vocabulary: '#f59e0b',
-  Listening: '#10b981',
-  Speaking: '#ef4444',
+  Listening: '#14b8a6',
+  Speaking: '#ec4899',
   Accent: '#ec4899',
-  Flashcards: '#8b5cf6',
+  Flashcards: '#f97316',
   Reading: '#06b6d4',
   Other: '#6b7280',
 }
@@ -90,6 +132,17 @@ export const DECKS: DeckName[] = [
   'Sentence Patterns',
   'Collocations',
 ]
+
+/** One bright color per deck so the study/manage screens read as
+ * distinct, colorful decks rather than identical gray cards. */
+export const DECK_COLORS: Record<DeckName, string> = {
+  'Everyday Vocabulary': '#14b8a6',
+  'Idioms & Phrasal Verbs': '#a855f7',
+  'Professional/Work English': '#3b82f6',
+  'Pronunciation Minimal Pairs': '#ec4899',
+  'Sentence Patterns': '#f97316',
+  Collocations: '#facc15',
+}
 
 export interface Flashcard {
   id: string

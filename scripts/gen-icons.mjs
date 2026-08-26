@@ -63,6 +63,6 @@ function makePng(size, [r, g, b]) {
   ])
 }
 
-writeFileSync('public/pwa-192.png', makePng(192, [124, 58, 237]))
-writeFileSync('public/pwa-512.png', makePng(512, [124, 58, 237]))
+writeFileSync('public/pwa-192.png', makePng(192, [34, 197, 94]))
+writeFileSync('public/pwa-512.png', makePng(512, [34, 197, 94]))
 console.log('Generated placeholder PWA icons.')
