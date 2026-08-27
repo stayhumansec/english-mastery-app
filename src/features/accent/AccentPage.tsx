@@ -25,6 +25,10 @@ function formatSeconds(total: number): string {
 export default function AccentPage() {
   const logs = useLiveQuery(() => db.accentLogs.orderBy('createdAt').reverse().toArray(), [])
   const prompts = useLiveQuery(() => db.scenarioPrompts.toArray(), [])
+  const minimalPairs = useLiveQuery(
+    () => db.flashcards.where('deck').equals('Pronunciation Minimal Pairs').toArray(),
+    [],
+  )
 
   const [level, setLevel] = useState<CefrLevel>('B1')
   const [currentPrompt, setCurrentPrompt] = useState<ScenarioPrompt | null>(null)
@@ -110,6 +114,24 @@ export default function AccentPage() {
           ))}
         </div>
       </motion.section>
+
+      {minimalPairs && minimalPairs.length > 0 && (
+        <motion.section variants={fadeUpItem} className="card space-y-2 p-4">
+          <h2 className="text-sm font-bold text-[var(--text-muted)]">Minimal pairs to self-monitor while shadowing</h2>
+          <p className="text-xs text-[var(--text-muted)]">
+            No AI scoring here — just the sound distinctions to listen for in your own recording, the way ELSA-style
+            apps target them.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {minimalPairs.map((c) => (
+              <div key={c.id} className="rounded-xl border-2 border-[var(--border)] p-2 text-sm">
+                <span className="font-bold">{c.front}</span>
+                <span className="text-[var(--text-muted)]"> — {c.back}</span>
+              </div>
+            ))}
+          </div>
+        </motion.section>
+      )}
 
       <motion.section variants={fadeUpItem} className="card mx-auto max-w-md space-y-3 p-4">
         <div className="flex gap-2">
