@@ -99,7 +99,19 @@ h3 {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 1.25rem;
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 1px 2px rgba(31, 36, 48, 0.04), 0 6px 16px -8px rgba(31, 36, 48, 0.12);
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+/* Clickable cards (a pattern/deck/module tile you tap to open something)
+   get a bit of lift and a glowing border on hover so they read as
+   interactive, not just decorative panels. */
+a.card:hover,
+button.card:hover,
+.card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 1px 2px rgba(31, 36, 48, 0.05), 0 12px 28px -10px rgba(31, 36, 48, 0.18);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
 }
 
 /* Pressable, "game button" style — a bottom-offset shadow that flattens
@@ -191,6 +203,63 @@ h3 {
 .blob-content {
   position: relative;
   z-index: 1;
+}
+
+/* Subtle dot-grid texture for the main content surface — reads as "this is
+   a textured surface" rather than flat empty white, without competing with
+   content. Sidebar/nav stay solid so it doesn't fight legibility there. */
+.content-texture {
+  background-image: radial-gradient(circle, rgba(31, 36, 48, 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Large, softly blurred ambient color glow — a bigger, gentler sibling of
+   .blob-decoration for filling wide empty areas behind a section (a page
+   header, a lone card) with intentional depth instead of flat white.
+   Set --glow-color/--glow-color-2 on the element to tint it. */
+.glow-section {
+  position: relative;
+}
+.glow-section::before {
+  content: '';
+  position: absolute;
+  inset: -15% -8%;
+  background:
+    radial-gradient(45% 55% at 25% 20%, var(--glow-color, var(--accent)) 0%, transparent 70%),
+    radial-gradient(40% 50% at 82% 65%, var(--glow-color-2, var(--purple)) 0%, transparent 70%);
+  opacity: 0.12;
+  filter: blur(36px);
+  pointer-events: none;
+  z-index: 0;
+}
+.glow-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* Thin dashed connector with a glowing endpoint dot — links sequential
+   Home sections (Continue -> checklist -> sessions) so they read as one
+   flow rather than isolated blocks. */
+.flow-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 1.75rem;
+}
+.flow-connector::before {
+  content: '';
+  flex: 1;
+  width: 0;
+  border-left: 2px dashed var(--connector-color, var(--border));
+  opacity: 0.7;
+}
+.flow-connector::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--connector-color, var(--border));
+  box-shadow: 0 0 8px 2px color-mix(in srgb, var(--connector-color, var(--border)) 55%, transparent);
 }
 
 /* Highlighted "pull quote" style example sentence — a bold left rule,

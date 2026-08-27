@@ -50,7 +50,7 @@ export default function Layout() {
         ))}
       </nav>
 
-      <main className="flex-1 px-4 pt-4 pb-20 md:px-8 md:pb-8">
+      <main className="content-texture flex-1 px-4 pt-4 pb-20 md:px-8 md:pb-8">
         <PageTransition />
       </main>
 

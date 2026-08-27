@@ -17,8 +17,10 @@ import { ensureWeeklyFocus, patternsForModule } from '../../lib/weeklyFocus'
 import { levelProgress } from '../../lib/xpConfig'
 import { computeWeakSpots, type WeakSpot } from '../../lib/weakSpots'
 import { computeStaleModules, type StaleModule } from '../../lib/staleness'
+import { BADGE_DEFINITIONS } from '../../lib/badgeDefinitions'
 import { CATEGORY_COLORS, CEFR_LEVELS, FEATURE_COLORS, type ActivityCategory } from '../../lib/types'
 import {
+  Award,
   BookOpen,
   CalendarDays,
   Check,
@@ -34,6 +36,8 @@ import {
   Zap,
 } from 'lucide-react'
 
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+
 export default function Dashboard() {
   const modules = useLiveQuery(() => db.modules.toArray(), [])
   const sessions = useLiveQuery(() => db.sessions.toArray(), [])
@@ -46,6 +50,7 @@ export default function Dashboard() {
   const patterns = useLiveQuery(() => db.patterns.toArray(), [])
   const scenarioPrompts = useLiveQuery(() => db.scenarioPrompts.toArray(), [])
   const xpEntries = useLiveQuery(() => db.xpLog.toArray(), [])
+  const badgeUnlocks = useLiveQuery(() => db.badgeUnlocks.toArray(), [])
 
   const [weeklyFocusModuleId, setWeeklyFocusModuleId] = useState<string | null>(null)
   const [weakSpot, setWeakSpot] = useState<WeakSpot | null>(null)
@@ -77,6 +82,21 @@ export default function Dashboard() {
   }, [timerLogs, accentLogs, sessions])
 
   const level = levelProgress(xpEntries?.reduce((s, e) => s + e.xpAwarded, 0) ?? 0)
+
+  const weeklyXp = useMemo(() => {
+    const cutoff = Date.now() - WEEK_MS
+    return xpEntries?.filter((e) => e.timestamp >= cutoff).reduce((s, e) => s + e.xpAwarded, 0) ?? 0
+  }, [xpEntries])
+
+  const masteredCount = flashcards?.filter((c) => c.repetitions >= 4).length ?? 0
+
+  const recentBadge = useMemo(() => {
+    if (!badgeUnlocks) return null
+    const unlocked = badgeUnlocks.filter((b) => b.unlockedAt).sort((a, b) => (b.unlockedAt ?? 0) - (a.unlockedAt ?? 0))
+    if (unlocked.length === 0) return null
+    const def = BADGE_DEFINITIONS.find((d) => d.id === unlocked[0].id)
+    return def ? { def, unlockedAt: unlocked[0].unlockedAt! } : null
+  }, [badgeUnlocks])
 
   const overallProgress = useMemo(() => {
     if (!modules || modules.length === 0) return 0
@@ -151,7 +171,7 @@ export default function Dashboard() {
         </div>
 
         {primaryAction ? (
-          <Link to={primaryAction.to} className="blob-content flex items-center gap-4">
+          <Link to={primaryAction.to} className="blob-content flex items-center gap-4 transition-transform hover:-translate-y-0.5">
             <IconBadge icon={primaryAction.icon} color={primaryAction.color} size={56} />
             <div className="min-w-0 flex-1">
               <p className="meta-label" style={{ color: primaryAction.color }}>{primaryAction.label}</p>
@@ -235,6 +255,8 @@ export default function Dashboard() {
         </motion.section>
       )}
 
+      <motion.div variants={fadeUpItem} className="flow-connector" style={{ ['--connector-color' as string]: 'var(--accent)' }} />
+
       <motion.section variants={fadeUpItem} className="card p-4">
         <h2 className="section-header mb-3 text-sm">Today's practice checklist</h2>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -250,6 +272,8 @@ export default function Dashboard() {
           />
         </div>
       </motion.section>
+
+      <motion.div variants={fadeUpItem} className="flow-connector" style={{ ['--connector-color' as string]: 'var(--blue)' }} />
 
       <motion.section variants={fadeUpItem} className="card p-4">
         <div className="mb-3 flex items-center justify-between">
@@ -277,11 +301,63 @@ export default function Dashboard() {
         </div>
       </motion.section>
 
-      <motion.section variants={fadeUpItem} className="card max-w-sm p-4">
-        <h2 className="section-header mb-2 text-sm">Overall CEFR progress</h2>
-        <ProgressBar value={overallProgress} thick gradient />
-      </motion.section>
+      {/* A row of evenly-sized summary cards instead of one progress card
+         sitting alone next to empty space — a soft ambient glow fills the
+         area behind them. */}
+      <motion.div
+        variants={fadeUpItem}
+        className="glow-section rounded-3xl p-1"
+        style={{ ['--glow-color' as string]: 'var(--accent)', ['--glow-color-2' as string]: 'var(--blue)' }}
+      >
+        <div className="glow-content grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="card p-4">
+            <p className="meta-label mb-2">Overall CEFR progress</p>
+            <p className="mb-2 text-2xl font-black">{Math.round(overallProgress)}%</p>
+            <ProgressBar value={overallProgress} thick gradient />
+          </div>
+          <SummaryCard icon={Zap} color="var(--yellow)" label="XP this week" value={weeklyXp} />
+          <SummaryCard icon={Layers} color="var(--purple)" label="Flashcards mastered" value={masteredCount} />
+          {recentBadge ? (
+            <div className="card flex flex-col justify-center gap-2 p-4">
+              <p className="meta-label">Recent achievement</p>
+              <div className="flex items-center gap-2">
+                <IconBadge icon={recentBadge.def.icon} color="var(--yellow)" size={34} />
+                <div className="min-w-0">
+                  <p className="section-header truncate text-sm">{recentBadge.def.name}</p>
+                  <p className="meta-label">{new Date(recentBadge.unlockedAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="card flex flex-col justify-center gap-1 p-4">
+              <IconBadge icon={Award} color="var(--text-muted)" size={34} />
+              <p className="meta-label">No badges yet</p>
+              <p className="body-text text-xs text-[var(--text-muted)]">Keep practicing to unlock your first one.</p>
+            </div>
+          )}
+        </div>
+      </motion.div>
     </motion.div>
+  )
+}
+
+function SummaryCard({
+  icon: Icon,
+  color,
+  label,
+  value,
+}: {
+  icon: typeof Zap
+  color: string
+  label: string
+  value: number
+}) {
+  return (
+    <div className="card flex flex-col justify-center gap-1 p-4">
+      <IconBadge icon={Icon} color={color} size={34} />
+      <AnimatedNumber value={value} className="font-display text-2xl font-black" />
+      <p className="meta-label">{label}</p>
+    </div>
   )
 }
 
@@ -379,7 +455,7 @@ function ChecklistItem({
   return (
     <Link
       to={to}
-      className="relative flex items-center gap-3 rounded-xl border-2 px-3 py-2 text-sm transition-colors"
+      className="relative flex items-center gap-3 rounded-xl border-2 px-3 py-2 text-sm transition-all hover:-translate-y-0.5 hover:brightness-[1.03]"
       style={{ borderColor: done ? 'var(--border)' : color, boxShadow: done ? 'none' : `0 3px 0 ${color}` }}
     >
       <Confetti trigger={celebrate} />
