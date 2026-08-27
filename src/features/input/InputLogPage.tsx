@@ -8,7 +8,19 @@ import { startOfWeekIso, todayIso } from '../../lib/date'
 import { computeWeeklyStreak } from '../../lib/streak'
 import { useToast } from '../../components/motion/ToastProvider'
 import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
-import { DECKS, FEATURE_COLORS, type CefrLevel, type DeckName, type InputDifficulty, type InputLogItem, type InputType } from '../../lib/types'
+import { MINI_STORIES } from '../../lib/miniStorySeed'
+import MiniStoryReader from './MiniStoryReader'
+import {
+  DECKS,
+  DIFFICULTY_COLORS,
+  DIFFICULTY_LABELS,
+  FEATURE_COLORS,
+  type CefrLevel,
+  type DeckName,
+  type InputDifficulty,
+  type InputLogItem,
+  type InputType,
+} from '../../lib/types'
 import { CEFR_LEVELS } from '../../lib/types'
 import { Plus, Trash2 } from 'lucide-react'
 
@@ -29,6 +41,9 @@ export default function InputLogPage() {
   const entries = useLiveQuery(() => db.inputLogs.orderBy('date').reverse().toArray(), [])
   const { showToast } = useToast()
   const color = FEATURE_COLORS.input
+
+  const [storyLevelFilter, setStoryLevelFilter] = useState<CefrLevel>('A1')
+  const [openStoryId, setOpenStoryId] = useState<string | null>(null)
 
   const [date, setDate] = useState(todayIso())
   const [title, setTitle] = useState('')
@@ -95,6 +110,57 @@ export default function InputLogPage() {
           <p className="text-xs font-bold" style={{ color }}>week streak</p>
         </div>
       </motion.div>
+
+      <motion.section variants={fadeUpItem} className="space-y-3">
+        <div>
+          <h2 className="font-bold">📖 Starter Reading Library</h2>
+          <p className="text-xs text-[var(--text-muted)]">
+            Short mini-stories that reuse the same core words across passages — click any highlighted word for its meaning.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {CEFR_LEVELS.filter((l) => MINI_STORIES.some((s) => s.level === l)).map((l) => (
+            <button
+              key={l}
+              onClick={() => setStoryLevelFilter(l)}
+              className="rounded-full px-3 py-1 text-xs font-bold"
+              style={
+                storyLevelFilter === l
+                  ? { background: color, color: 'white' }
+                  : { background: 'var(--surface-alt)', color: 'var(--text-muted)' }
+              }
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+        <div className="space-y-2">
+          {MINI_STORIES.filter((s) => s.level === storyLevelFilter).map((story) =>
+            openStoryId === story.id ? (
+              <div key={story.id} className="space-y-2">
+                <button onClick={() => setOpenStoryId(null)} className="text-xs font-semibold text-[var(--text-muted)]">
+                  ← Back to list
+                </button>
+                <MiniStoryReader story={story} />
+              </div>
+            ) : (
+              <button
+                key={story.id}
+                onClick={() => setOpenStoryId(story.id)}
+                className="card flex w-full items-center justify-between p-3 text-left"
+              >
+                <span className="font-semibold">{story.title}</span>
+                <span
+                  className="rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
+                  style={{ background: DIFFICULTY_COLORS[story.difficulty] }}
+                >
+                  {DIFFICULTY_LABELS[story.difficulty]}
+                </span>
+              </button>
+            ),
+          )}
+        </div>
+      </motion.section>
 
       <motion.section variants={fadeUpItem} className="card mx-auto max-w-lg space-y-3 p-4">
         <div className="flex gap-2">
