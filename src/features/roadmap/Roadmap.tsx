@@ -5,13 +5,19 @@ import { v4 as uuid } from 'uuid'
 import { motion } from 'framer-motion'
 import { db } from '../../lib/db'
 import ProgressBar from '../../components/ProgressBar'
+import PatternText from '../../components/PatternText'
 import Confetti from '../../components/motion/Confetti'
 import Quiz from '../../components/Quiz'
 import SpotThePattern from '../../components/SpotThePattern'
+import Mascot from '../../components/Mascot'
 import { useToast } from '../../components/motion/ToastProvider'
 import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
 import { LESSON_CONTENT, QUIZ_PASS_THRESHOLD } from '../../lib/lessonContent'
 import { patternsForModule } from '../../lib/weeklyFocus'
+import { markModuleRefreshed } from '../../lib/staleness'
+import { awardXp, totalXp } from '../../lib/xp'
+import { levelForXp } from '../../lib/xpConfig'
+import { evaluateBadges } from '../../lib/badges'
 import {
   CEFR_LEVELS,
   DIFFICULTY_COLORS,
@@ -65,6 +71,7 @@ export default function Roadmap() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const lessonModuleId = searchParams.get('lesson')
+  const refreshModuleId = searchParams.get('refresh')
 
   if (!modules) return <p className="text-sm text-[var(--text-muted)]">Loading…</p>
 
@@ -77,6 +84,11 @@ export default function Roadmap() {
 
   const openLesson = (id: string) => setSearchParams({ lesson: id })
   const closeLesson = () => setSearchParams({})
+
+  const refreshModule = refreshModuleId ? modules.find((m) => m.id === refreshModuleId) : null
+  if (refreshModule) {
+    return <RefreshView module={refreshModule} patterns={patterns ?? []} onDone={closeLesson} />
+  }
 
   const lessonModule = lessonModuleId ? modules.find((m) => m.id === lessonModuleId) : null
   if (lessonModule) {
@@ -136,8 +148,8 @@ export default function Roadmap() {
       >
         <div className="blob-content"><IconBadge icon={Map} color="var(--accent)" size={44} /></div>
         <div className="blob-content flex-1">
-          <h1 className="text-2xl font-black">CEFR Roadmap</h1>
-          <p className="text-sm font-medium text-[var(--text-muted)]">
+          <h1 className="page-title">CEFR Roadmap</h1>
+          <p className="body-text text-[var(--text-muted)]">
             A guided course, A1 → C2 — work through each level in order.
           </p>
           <div className="mt-3 max-w-sm">
@@ -214,6 +226,69 @@ export default function Roadmap() {
           </motion.section>
         )
       })}
+    </motion.div>
+  )
+}
+
+function RefreshView({
+  module: mod,
+  patterns,
+  onDone,
+}: {
+  module: RoadmapModule
+  patterns: Pattern[]
+  onDone: () => void
+}) {
+  const color = LEVEL_COLORS[mod.level]
+  const linkedPattern = patternsForModule(mod, patterns)[0]
+  const cards = useLiveQuery(
+    () => (linkedPattern ? db.flashcards.where('patternId').equals(linkedPattern.id).limit(3).toArray() : []),
+    [linkedPattern?.id],
+  )
+
+  const finish = async () => {
+    await markModuleRefreshed(mod.id)
+    onDone()
+  }
+
+  return (
+    <motion.div className="mx-auto max-w-2xl space-y-4" variants={staggerContainer} initial="hidden" animate="show">
+      <motion.button variants={fadeUpItem} onClick={onDone} className="text-sm font-semibold text-[var(--text-muted)]">
+        ← Back to Roadmap
+      </motion.button>
+      <motion.div variants={fadeUpItem} className="flex items-center gap-2">
+        <IconBadge icon={GraduationCap} color="var(--teal)" size={40} />
+        <div>
+          <p className="meta-label" style={{ color: 'var(--teal)' }}>Quick refresh</p>
+          <h1 className="page-title">{mod.title}</h1>
+        </div>
+      </motion.div>
+
+      {linkedPattern ? (
+        <motion.section variants={fadeUpItem} className="card space-y-2 p-4">
+          <h2 className="section-header text-sm">{linkedPattern.name}</h2>
+          <p className="body-text"><PatternText segments={linkedPattern.structureTemplate} /></p>
+          <p className="body-text text-sm text-[var(--text-muted)]">{linkedPattern.ruleExplanation}</p>
+        </motion.section>
+      ) : (
+        <motion.p variants={fadeUpItem} className="body-text text-sm text-[var(--text-muted)]">{mod.description}</motion.p>
+      )}
+
+      {cards && cards.length > 0 && (
+        <motion.section variants={fadeUpItem} className="space-y-2">
+          <h2 className="section-header text-sm">A few flashcards, out of cycle</h2>
+          {cards.map((c) => (
+            <div key={c.id} className="card p-3">
+              <p className="font-bold">{c.front}</p>
+              <p className="body-text text-sm text-[var(--text-muted)]">{c.back}</p>
+            </div>
+          ))}
+        </motion.section>
+      )}
+
+      <motion.button variants={fadeUpItem} onClick={finish} className="btn w-full py-2 text-sm text-white" style={{ background: color }}>
+        Done — mark refreshed
+      </motion.button>
     </motion.div>
   )
 }
@@ -379,6 +454,7 @@ function LessonView({
   const locked = !!prevModule && prevModule.status !== 'done'
   const [burst, setBurst] = useState(0)
   const [ruleRevealed, setRuleRevealed] = useState(false)
+  const [activeSectionIdx, setActiveSectionIdx] = useState(0)
   const { showToast } = useToast()
 
   useEffect(() => {
@@ -394,12 +470,6 @@ function LessonView({
   const canMarkDone = lesson ? (mod.quizBestScore ?? 0) >= QUIZ_PASS_THRESHOLD : true
   const passed = (mod.quizBestScore ?? 0) >= QUIZ_PASS_THRESHOLD
 
-  const markDone = () => {
-    onUpdate({ status: 'done' })
-    setBurst((b) => b + 1)
-    showToast('Lesson complete — great work!', '🎓')
-  }
-
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -410,6 +480,54 @@ function LessonView({
     { id: 'lv-practice', label: 'Practice' },
     { id: 'lv-quiz', label: 'Quick check' },
   ]
+
+  // Lightweight scroll-spy so the sticky sidebar reads as "Section X of Y"
+  // rather than a flat list — the lesson feels like a navigable document.
+  useEffect(() => {
+    if (!lesson) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+        if (visible[0]) {
+          const idx = sections.findIndex((s) => s.id === visible[0].target.id)
+          if (idx !== -1) setActiveSectionIdx(idx)
+        }
+      },
+      { rootMargin: '-15% 0px -70% 0px' },
+    )
+    sections.forEach((s) => {
+      const el = document.getElementById(s.id)
+      if (el) observer.observe(el)
+    })
+    return () => observer.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lesson, ruleRevealed])
+
+  // A "signature moment" (Part 1 §5): completing a lesson awards XP, may
+  // trigger a level bonus/level-up and badge unlocks, and gets the fuller
+  // celebration treatment (confetti + mascot + toast) rather than the
+  // quick, understated animation used everywhere else.
+  const markDone = async () => {
+    const levelBefore = levelForXp(await totalXp())
+
+    await onUpdate({ status: 'done', lastPracticedAt: Date.now() })
+    await awardXp('module_complete', mod.id)
+
+    const levelSiblings = await db.modules.where('level').equals(mod.level).toArray()
+    const levelNowComplete = levelSiblings.every((m) => m.id === mod.id || m.status === 'done')
+    if (levelNowComplete) await awardXp('level_complete', mod.level)
+
+    const { newlyUnlocked } = await evaluateBadges()
+    const levelAfter = levelForXp(await totalXp())
+
+    setBurst((b) => b + 1)
+    showToast('Lesson complete — great work!', '🎓')
+    if (levelNowComplete) showToast(`Level ${mod.level} complete! +250 XP`, '🏆')
+    if (levelAfter > levelBefore) showToast(`Level up! You're now level ${levelAfter}`, '⭐')
+    newlyUnlocked.forEach((b) => showToast(`Badge unlocked: ${b.def.name}!`, '🏅'))
+  }
 
   return (
     <motion.div className="relative mx-auto max-w-3xl" variants={staggerContainer} initial="hidden" animate="show">
@@ -445,9 +563,15 @@ function LessonView({
               </span>
             )}
           </div>
-          <h1 className="text-2xl font-black">{mod.title}</h1>
+          <h1 className="page-title">{mod.title}</h1>
         </div>
       </motion.div>
+
+      {mod.relevanceNote && (
+        <motion.p variants={fadeUpItem} className="mb-5 rounded-xl px-3 py-2 text-xs font-medium text-[var(--text-muted)]" style={{ background: 'var(--surface-alt)' }}>
+          💡 {mod.relevanceNote}
+        </motion.p>
+      )}
 
       <div className={lesson ? 'grid gap-6 md:grid-cols-[1fr_170px]' : ''}>
         <div className="space-y-5">
@@ -462,7 +586,7 @@ function LessonView({
             <div className="space-y-2">
               <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Related patterns</p>
               {fallbackPatterns.map((p) => (
-                <Link key={p.id} to="/patterns" className="block rounded-xl border-2 border-[var(--border)] p-2 text-sm hover:border-[var(--accent)]">
+                <Link key={p.id} to="/practice?tab=patterns" className="block rounded-xl border-2 border-[var(--border)] p-2 text-sm hover:border-[var(--accent)]">
                   {p.name}
                 </Link>
               ))}
@@ -562,12 +686,12 @@ function LessonView({
             <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color }}>Practice</h2>
             <div className="flex flex-wrap gap-3">
               {lesson.linkDecks?.map((deck) => (
-                <Link key={deck} to="/flashcards" className="btn btn-secondary px-3 py-1.5 text-sm">
+                <Link key={deck} to="/practice?tab=flashcards" className="btn btn-secondary px-3 py-1.5 text-sm">
                   Review "{deck}" flashcards
                 </Link>
               ))}
               {linkedPattern && (
-                <Link to={`/drills?patternId=${linkedPattern.id}`} className="btn px-3 py-1.5 text-sm text-white" style={{ background: color }}>
+                <Link to={`/practice?tab=drills&patternId=${linkedPattern.id}`} className="btn px-3 py-1.5 text-sm text-white" style={{ background: color }}>
                   Sentence Production Drill
                 </Link>
               )}
@@ -592,7 +716,10 @@ function LessonView({
 
           <motion.section variants={fadeUpItem} className="mt-5 text-center">
             {mod.status === 'done' ? (
-              <p className="font-bold" style={{ color }}>✅ Module complete</p>
+              <div className="flex flex-col items-center gap-2">
+                <Mascot pose="celebrate" size={56} color={color} />
+                <p className="font-bold" style={{ color }}>Module complete</p>
+              </div>
             ) : (
               <button
                 onClick={markDone}
@@ -619,15 +746,19 @@ function LessonView({
         {lesson && (
           <motion.nav variants={fadeUpItem} className="hidden md:block">
             <div className="sticky top-4 card space-y-1 p-3">
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">On this page</p>
-              {sections.map((s) => (
+              <p className="meta-label mb-1" style={{ color }}>
+                Section {activeSectionIdx + 1} of {sections.length}
+              </p>
+              <p className="mb-1 text-xs font-bold text-[var(--text)]">{sections[activeSectionIdx].label}</p>
+              {sections.map((s, i) => (
                 <button
                   key={s.id}
                   onClick={() => scrollTo(s.id)}
-                  className="block w-full rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
-                  style={{ background: 'transparent' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-alt)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                  className="block w-full rounded-lg px-2 py-1.5 text-left text-xs font-semibold transition-colors"
+                  style={{
+                    background: i === activeSectionIdx ? 'var(--surface-alt)' : 'transparent',
+                    color: i === activeSectionIdx ? 'var(--text)' : 'var(--text-muted)',
+                  }}
                 >
                   {s.label}
                 </button>

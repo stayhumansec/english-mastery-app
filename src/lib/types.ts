@@ -29,6 +29,13 @@ export type FeatureKey =
   | 'patterns'
   | 'accent'
   | 'settings'
+  // Consolidated top-level nav destinations (Part 1 IA restructure) — the
+  // sub-feature keys above remain in use for tab/section accents *within*
+  // these hubs.
+  | 'learn'
+  | 'practice'
+  | 'journalSpeaking'
+  | 'progress'
 
 export const FEATURE_COLORS: Record<FeatureKey, string> = {
   home: '#22c55e',
@@ -42,6 +49,10 @@ export const FEATURE_COLORS: Record<FeatureKey, string> = {
   patterns: '#a855f7',
   accent: '#ec4899',
   settings: '#6b7280',
+  learn: '#22c55e',
+  practice: '#a855f7',
+  journalSpeaking: '#ec4899',
+  progress: '#facc15',
 }
 
 /** Self-selected difficulty, independent of CEFR level — so a learner can
@@ -78,6 +89,15 @@ export interface RoadmapModule {
    * quiz content can only be marked "done" once this clears the pass
    * threshold — see QUIZ_PASS_THRESHOLD in lessonContent.ts. */
   quizBestScore?: number
+  /** Why this module matters for this learner's own work, when a genuine
+   * connection exists (e.g. a cybersecurity/professional angle) — shown as
+   * a small aside on the lesson page. Left unset where none applies. */
+  relevanceNote?: string | null
+  /** Timestamp this module's staleness timer was last reset (completion, or
+   * a later refresh) — used by the retention safety net to flag modules
+   * that haven't been touched in a while. Falls back to createdAt/done
+   * time when unset. */
+  lastPracticedAt?: number
 }
 
 export type ActivityCategory =
@@ -167,6 +187,17 @@ export const DECK_COLORS: Record<DeckName, string> = {
   Collocations: '#facc15',
 }
 
+export type FrequencyTier = 'top1000' | 'top3000' | 'top5000' | 'beyond'
+
+export const FREQUENCY_TIERS: FrequencyTier[] = ['top1000', 'top3000', 'top5000', 'beyond']
+
+export const FREQUENCY_TIER_LABELS: Record<FrequencyTier, string> = {
+  top1000: 'Top 1000',
+  top3000: 'Top 3000',
+  top5000: 'Top 5000',
+  beyond: 'Beyond 5000',
+}
+
 export interface Flashcard {
   id: string
   deck: DeckName
@@ -180,6 +211,14 @@ export interface Flashcard {
   /** Links a Grammar-in-Context style card (typically in "Sentence Patterns")
    * back to its full Pattern Library entry. */
   patternId?: string
+  /** Word-frequency tier (COCA-style), for prioritizing high-frequency
+   * vocabulary. null/unset where frequency doesn't meaningfully apply
+   * (idioms, grammar-in-context cards) or for user-added cards that
+   * haven't set one. */
+  frequencyTier?: FrequencyTier | null
+  /** Common collocations this word appears in, e.g. ["make a decision"].
+   * Shown as small chips on the back of the card when non-empty. */
+  collocations?: string[]
   // SM-2 scheduling state
   repetitions: number
   easeFactor: number
@@ -255,6 +294,17 @@ export interface JournalEntry {
 
 export type DrillConfidence = 'confident' | 'unsure'
 
+/** Three yes/no/not-sure self-checks shown after the model-answer reveal.
+ * A "no" or "unsure" on any of them counts toward that pattern's
+ * weak-spot score (see lib/weakSpots.ts). */
+export type SelfCheckAnswer = 'yes' | 'no' | 'unsure'
+
+export interface DrillSelfCheck {
+  grammarCorrect: SelfCheckAnswer
+  soundsNatural: SelfCheckAnswer
+  rightRegister: SelfCheckAnswer
+}
+
 export interface DrillAttempt {
   id: string
   date: string
@@ -263,6 +313,9 @@ export interface DrillAttempt {
   sentence: string
   confidence: DrillConfidence
   createdAt: number
+  /** Self-scoring rubric, filled in after the model answer is revealed.
+   * Unset for attempts logged before this feature existed. */
+  selfCheck?: DrillSelfCheck
 }
 
 /** The fixed color-coded roles used across the Pattern Library so the same
@@ -317,6 +370,9 @@ export interface Pattern {
   ruleExplanation: string
   recognitionParagraph?: RecognitionToken[]
   createdAt: number
+  /** Why this pattern matters for this learner's own work, when a genuine
+   * connection exists. Left unset where none applies. */
+  relevanceNote?: string | null
 }
 
 export interface QuizQuestionMCQ {
@@ -379,4 +435,53 @@ export interface AppSettings {
   breakWorkMinutes: number
   breakDurationMinutes: number
   weeklyFocus?: WeeklyFocus
+  /** Set once the first-launch onboarding flow has been completed or
+   * skipped, so it never shows again. */
+  onboardingCompleted?: boolean
+  /** The CEFR level picked (or confirmed) during onboarding. Purely
+   * informational — doesn't gate anything in the roadmap. */
+  startingLevel?: CefrLevel
+  /** Whether to auto-show the Weekly Recap once per week. Default off. */
+  weeklyRecapAutoShow?: boolean
+  /** ISO week key ("YYYY-Www") the recap was last auto-shown for, so it
+   * only pops up once per week even across sessions. */
+  weeklyRecapLastShown?: string
+}
+
+/** One source of XP, always traceable back to the real action that
+ * triggered it (a specific flashcard, module, journal entry, drill...). */
+export type XpActivityType =
+  | 'flashcard_review'
+  | 'flashcard_review_easy'
+  | 'drill_sentence'
+  | 'drill_spot_pattern'
+  | 'journal_entry'
+  | 'journal_entry_short'
+  | 'speaking_prompt'
+  | 'input_log_entry'
+  | 'module_complete'
+  | 'level_complete'
+  | 'daily_login'
+
+export interface XpLogEntry {
+  id: string
+  timestamp: number
+  activityType: XpActivityType
+  xpAwarded: number
+  /** The specific record that triggered this XP (flashcard id, module id,
+   * journal entry id, drill attempt id...). Undefined only for activity
+   * types with no single source record (e.g. daily_login). */
+  sourceId?: string
+}
+
+export type BadgeCategory = 'streak' | 'vocabulary' | 'roadmap' | 'output' | 'consistency'
+
+/** Persisted unlock state for one badge. The badge's name/description/icon/
+ * criteria live in code (lib/badgeDefinitions.ts) — this table only tracks
+ * whether and when it unlocked, so there's no duplicate state to drift out
+ * of sync with the definitions. */
+export interface BadgeUnlock {
+  id: string
+  category: BadgeCategory
+  unlockedAt: number | null
 }

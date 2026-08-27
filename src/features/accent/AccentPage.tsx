@@ -6,6 +6,8 @@ import { db } from '../../lib/db'
 import { todayIso } from '../../lib/date'
 import { useToast } from '../../components/motion/ToastProvider'
 import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
+import { awardXp } from '../../lib/xp'
+import { evaluateBadges } from '../../lib/badges'
 import { CEFR_LEVELS, FEATURE_COLORS, SCENARIO_CATEGORIES, type AccentLog, type CefrLevel, type ScenarioCategory, type ScenarioPrompt } from '../../lib/types'
 import { Play, Square, Trash2 } from 'lucide-react'
 
@@ -68,8 +70,9 @@ export default function AccentPage() {
 
   const submit = async () => {
     if (!activity.trim()) return
+    const logId = uuid()
     await db.accentLogs.add({
-      id: uuid(),
+      id: logId,
       date: todayIso(),
       activity: activity.trim(),
       rating,
@@ -79,6 +82,8 @@ export default function AccentPage() {
       durationSeconds: seconds > 0 ? seconds : undefined,
       createdAt: Date.now(),
     })
+    await awardXp('speaking_prompt', logId)
+    await evaluateBadges()
     if (intervalRef.current) window.clearInterval(intervalRef.current)
     setActivity('')
     setNotes('')

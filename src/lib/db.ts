@@ -2,6 +2,7 @@ import Dexie, { type Table } from 'dexie'
 import type {
   AccentLog,
   AppSettings,
+  BadgeUnlock,
   CalendarSession,
   DrillAttempt,
   Flashcard,
@@ -12,6 +13,7 @@ import type {
   ScenarioPrompt,
   TimerLog,
   WordLookup,
+  XpLogEntry,
 } from './types'
 
 export class EnglishMasteryDB extends Dexie {
@@ -27,6 +29,8 @@ export class EnglishMasteryDB extends Dexie {
   drillAttempts!: Table<DrillAttempt, string>
   patterns!: Table<Pattern, string>
   wordLookups!: Table<WordLookup, string>
+  xpLog!: Table<XpLogEntry, string>
+  badgeUnlocks!: Table<BadgeUnlock, string>
 
   constructor() {
     super('english-mastery-db')
@@ -53,6 +57,10 @@ export class EnglishMasteryDB extends Dexie {
     })
     this.version(3).stores({
       wordLookups: 'word',
+    })
+    this.version(4).stores({
+      xpLog: 'id, timestamp, activityType',
+      badgeUnlocks: 'id, category, unlockedAt',
     })
   }
 }

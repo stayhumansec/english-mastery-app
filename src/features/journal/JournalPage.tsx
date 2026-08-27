@@ -7,6 +7,9 @@ import { todayIso } from '../../lib/date'
 import { computeStreak } from '../../lib/streak'
 import { useToast } from '../../components/motion/ToastProvider'
 import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
+import { awardXp } from '../../lib/xp'
+import { evaluateBadges } from '../../lib/badges'
+import { JOURNAL_MIN_WORDS_FOR_FULL_XP } from '../../lib/xpConfig'
 import { FEATURE_COLORS } from '../../lib/types'
 import { Trash2 } from 'lucide-react'
 
@@ -34,15 +37,19 @@ export default function JournalPage() {
 
   const submit = async () => {
     if (!text.trim()) return
+    const words = wordCount(text)
+    const entryId = uuid()
     await db.journalEntries.add({
-      id: uuid(),
+      id: entryId,
       date: todayIso(),
       text: text.trim(),
-      wordCount: wordCount(text),
+      wordCount: words,
       tag: tag.trim() || undefined,
       patternId: patternId || undefined,
       createdAt: Date.now(),
     })
+    await awardXp(words >= JOURNAL_MIN_WORDS_FOR_FULL_XP ? 'journal_entry' : 'journal_entry_short', entryId)
+    await evaluateBadges()
     setText('')
     setTag('')
     setPatternId('')

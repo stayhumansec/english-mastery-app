@@ -1,10 +1,19 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { db } from '../../lib/db'
 import { notificationsSupported, requestNotificationPermission } from '../../lib/notifications'
 import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
+import { useToast } from '../../components/motion/ToastProvider'
+import {
+  applyBackup,
+  buildBackup,
+  downloadBackup,
+  getLastBackupAt,
+  validateBackup,
+} from '../../lib/backup'
 import { FEATURE_COLORS, type AppSettings } from '../../lib/types'
+import { Download, Upload } from 'lucide-react'
 
 export default function SettingsPage() {
   const settings = useLiveQuery(() => db.settings.get('app'), [])
@@ -12,10 +21,52 @@ export default function SettingsPage() {
     notificationsSupported() ? Notification.permission : 'unsupported',
   )
   const [newTime, setNewTime] = useState('07:00')
+  const [lastBackupAt, setLastBackupAt] = useState(getLastBackupAt())
+  const [importError, setImportError] = useState('')
+  const [pendingImport, setPendingImport] = useState<{ data: Awaited<ReturnType<typeof buildBackup>>; fileDate: string } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const { showToast } = useToast()
 
   if (!settings) return <p className="text-sm text-[var(--text-muted)]">Loading…</p>
 
   const update = (patch: Partial<AppSettings>) => db.settings.update('app', patch)
+
+  const exportData = async () => {
+    const data = await buildBackup()
+    downloadBackup(data)
+    setLastBackupAt(getLastBackupAt())
+    showToast('Backup downloaded!', '💾')
+  }
+
+  const pickImportFile = () => fileInputRef.current?.click()
+
+  const onImportFileChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setImportError('')
+    try {
+      const text = await file.text()
+      const parsed = JSON.parse(text)
+      if (!validateBackup(parsed)) {
+        setImportError('This file doesn\'t look like a valid English Mastery backup.')
+        return
+      }
+      setPendingImport({ data: parsed, fileDate: new Date(parsed.exportedAt).toLocaleDateString() })
+    } catch {
+      setImportError('Could not read that file — make sure it\'s a valid .json backup.')
+    }
+  }
+
+  const confirmImport = async () => {
+    if (!pendingImport) return
+    await applyBackup(pendingImport.data)
+    setPendingImport(null)
+    showToast('Backup restored — reloading…', '✅')
+    window.setTimeout(() => window.location.reload(), 600)
+  }
+
+  const daysSinceBackup = lastBackupAt ? Math.floor((Date.now() - lastBackupAt) / (24 * 60 * 60 * 1000)) : null
 
   const enableNotifications = async () => {
     const result = await requestNotificationPermission()
@@ -36,7 +87,7 @@ export default function SettingsPage() {
 
   return (
     <motion.div className="max-w-xl space-y-6" variants={staggerContainer} initial="hidden" animate="show">
-      <motion.h1 variants={fadeUpItem} className="text-2xl font-black" style={{ color }}>Settings ⚙️</motion.h1>
+      <motion.h1 variants={fadeUpItem} className="page-title" style={{ color }}>Settings ⚙️</motion.h1>
 
       <motion.section variants={fadeUpItem} className="card space-y-3 p-4">
         <h2 className="font-bold">Notifications</h2>
@@ -150,6 +201,61 @@ export default function SettingsPage() {
           />
         </label>
       </motion.section>
+
+      <motion.section variants={fadeUpItem} className="card space-y-3 p-4">
+        <h2 className="section-header text-sm">Weekly recap</h2>
+        <label className="flex items-center justify-between text-sm">
+          <span>Auto-show once per week</span>
+          <input
+            type="checkbox"
+            checked={settings.weeklyRecapAutoShow ?? false}
+            onChange={(e) => update({ weeklyRecapAutoShow: e.target.checked })}
+          />
+        </label>
+      </motion.section>
+
+      <motion.section variants={fadeUpItem} className="card space-y-3 p-4">
+        <h2 className="section-header text-sm">Backup & Restore</h2>
+        <p className="body-text text-sm text-[var(--text-muted)]">
+          {lastBackupAt
+            ? `Last backup: ${new Date(lastBackupAt).toLocaleDateString()}`
+            : "You haven't backed up yet."}
+        </p>
+        {daysSinceBackup !== null && daysSinceBackup > 14 && (
+          <p className="rounded-xl px-3 py-2 text-xs font-semibold" style={{ background: 'var(--orange-soft)', color: 'var(--orange)' }}>
+            It's been {daysSinceBackup} days since your last backup — consider exporting your data.
+          </p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <button onClick={exportData} className="btn btn-primary px-3 py-1.5 text-sm">
+            <Download size={14} /> Export my data
+          </button>
+          <button onClick={pickImportFile} className="btn btn-secondary px-3 py-1.5 text-sm">
+            <Upload size={14} /> Restore from backup
+          </button>
+          <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={onImportFileChosen} />
+        </div>
+        {importError && <p className="text-xs font-semibold text-red-500">{importError}</p>}
+      </motion.section>
+
+      {pendingImport && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+          <div className="card w-full max-w-sm space-y-3 p-5">
+            <h2 className="section-header text-sm">Restore from backup?</h2>
+            <p className="body-text text-sm text-[var(--text-muted)]">
+              This will replace all current data with the backup from {pendingImport.fileDate}. This cannot be undone. Continue?
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setPendingImport(null)} className="btn btn-secondary flex-1 py-2 text-sm">
+                Cancel
+              </button>
+              <button onClick={confirmImport} className="btn flex-1 py-2 text-sm text-white" style={{ background: '#ef4444' }}>
+                Replace my data
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <motion.p variants={fadeUpItem} className="text-xs text-[var(--text-muted)]">
         Notifications only fire while this app is open in a tab or installed window — see the

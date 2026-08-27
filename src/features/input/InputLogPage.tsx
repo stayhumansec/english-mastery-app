@@ -8,6 +8,8 @@ import { startOfWeekIso, todayIso } from '../../lib/date'
 import { computeWeeklyStreak } from '../../lib/streak'
 import { useToast } from '../../components/motion/ToastProvider'
 import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
+import { awardXp } from '../../lib/xp'
+import { evaluateBadges } from '../../lib/badges'
 import { MINI_STORIES } from '../../lib/miniStorySeed'
 import MiniStoryReader from './MiniStoryReader'
 import {
@@ -75,8 +77,9 @@ export default function InputLogPage() {
 
   const submit = async () => {
     if (!title.trim()) return
+    const entryId = uuid()
     await db.inputLogs.add({
-      id: uuid(),
+      id: entryId,
       date,
       title: title.trim(),
       type,
@@ -85,6 +88,8 @@ export default function InputLogPage() {
       items: items.filter((it) => it.text.trim()).map((it) => ({ text: it.text.trim(), note: it.note?.trim() || undefined })),
       createdAt: Date.now(),
     })
+    await awardXp('input_log_entry', entryId)
+    await evaluateBadges()
     setTitle('')
     setDurationMinutes(15)
     setItems([{ text: '', note: '' }])

@@ -5,6 +5,18 @@ A personal, single-user web app for taking yourself from A1 (beginner) to C2
 It's a local-first PWA — everything is stored in your browser, there's no
 backend, no accounts, and no cloud sync.
 
+## Navigation
+
+Six primary destinations: **Home** (a single "what do I do right now"
+action, then a compact stats row, then checklist/nudges/progress),
+**Learn** (the CEFR roadmap + lessons), **Practice** (Flashcards, Drills,
+Patterns and the Study Timer as tabs in one hub), **Journal** (Journal,
+Speaking and the Comprehensible Input Log as tabs), **Progress**
+(Achievements + Weekly Recap), and **Settings**. Calendar stays fully
+functional but is reached via a link from Home rather than a top-level nav
+slot. A short skippable onboarding flow (welcome → starting level → roadmap
+preview → land on Home) shows once, on first launch.
+
 ## Features
 
 - **CEFR Roadmap** — an editable A1→C2 curriculum tracker. Modules with
@@ -68,12 +80,50 @@ backend, no accounts, and no cloud sync.
   scheduled sessions, current streak, and overall CEFR progress.
 - **Reminders** — optional browser notifications for scheduled study times
   and an end-of-day nudge if nothing has been logged yet.
+- **Gamification** — XP for real logged actions (flashcard reviews, drills,
+  journal entries, speaking prompts, input log entries, completed modules
+  and levels, a daily login bonus), a level (`floor(sqrt(totalXP / 100))`)
+  shown with an animated progress bar, and 17 pre-seeded badges (streak,
+  vocabulary, roadmap, output, consistency) unlocked by a single
+  progress-check function per badge run after any logged action — unlocks
+  get the full celebration treatment (confetti, mascot, toast). A **Weekly
+  Recap** (Progress → This Week) computes study minutes, reviews, new
+  words, journal words, streak status, XP and a dynamically-picked
+  highlight from the last 7 days of logged data, live on every render.
+- **Mistake pattern tracker** — after a Sentence Production Drill's model
+  answer, a 3-question self-check rubric (grammar/naturalness/register)
+  feeds a rolling 30-day weak-spot score per pattern; patterns with 2+
+  qualifying attempts surface in Practice → Patterns with "Review pattern"
+  and "Try again" actions, and the single worst weak spot appears as a
+  gentle nudge on Home.
+- **Vocabulary depth** — flashcards carry an optional COCA-style frequency
+  tier (Top 1000/3000/5000/Beyond) and a `collocations` list shown as chips
+  on the card back; the deck browser filters by tier, and a "prioritize
+  high-frequency words" toggle sorts the daily study queue toward them.
+- **Retention safety net** — a "done" module whose linked pattern hasn't
+  had a flashcard review or drill attempt in 21+ days is flagged as
+  needing a refresh (a calmer, teal "Time to Refresh" card on Home, an
+  indicator in Learn); the refresh flow shows the pattern plus 2-3
+  flashcards out of cycle and resets the staleness timer.
+- **Backup & Restore** (Settings) — exports every local table to one
+  `english-mastery-backup-YYYY-MM-DD.json` file (with a `schemaVersion`)
+  and restores from one with a confirmation modal and validation; Settings
+  shows the last backup date and a reminder banner past 14 days.
+- **Personal relevance notes** — a handful of roadmap modules and pattern
+  entries with a genuine professional/cybersecurity-adjacent connection
+  (register, passive voice for incident reports, reported speech,
+  persuasion) carry a short "Useful for:" aside on their lesson/detail
+  page; left blank everywhere a connection would be forced.
 - Installable **PWA** that works offline.
-- A light, colorful, Duolingo-style design system — bright per-feature/
-  per-level colors, rounded cards and pill buttons, and springy Framer
-  Motion animation throughout (page transitions, count-up stats, a real
-  3D flashcard flip, confetti bursts on milestones), with a
-  `prefers-reduced-motion` fallback.
+- A light, colorful, Duolingo-style design system — a consistent
+  typographic scale (page title / section header / body / uppercase
+  meta label), a recurring blob-style mascot character (empty states,
+  celebrations, onboarding), bright per-feature/per-level colors, rounded
+  cards and pill buttons, and springy Framer Motion animation concentrated
+  into a handful of "signature moments" (lesson complete, level-up,
+  streak milestones via badges, finishing a practice session) — everything
+  else (hovers, tab switches, page transitions) stays quick and
+  understated, with a `prefers-reduced-motion` fallback throughout.
 
 ## Tech stack
 
@@ -106,8 +156,8 @@ The app seeds itself on first run with the full A1–C2 roadmap skeleton,
 ~21 starter flashcards, 12 Pattern Library entries (A1–B2) and ~20 leveled
 speaking scenario prompts, so it isn't empty on first launch. All data
 lives in IndexedDB (`english-mastery-db`) in your browser — clearing site
-data will wipe your progress, so back up anything irreplaceable (there's
-currently no export/import; see Roadmap below).
+data will wipe your progress, so back up anything irreplaceable via
+Settings → Backup & Restore → Export my data.
 
 ## Design notes & trade-offs
 
@@ -148,30 +198,37 @@ currently no export/import; see Roadmap below).
 
 ```
 src/
-  lib/            # storage (Dexie schema), types, SM-2, date/streak utils, notifications
-  routes/          # top-level layout + nav
-  components/      # small shared UI (progress bars, etc.)
+  lib/              # storage (Dexie schema), types, SM-2, date/streak utils,
+                     # XP/badges/weak-spots/staleness/backup, notifications
+  routes/           # top-level layout + nav
+  components/       # small shared UI (progress bars, mascot, etc.)
   features/
-    dashboard/     # home screen
-    roadmap/       # CEFR roadmap tracker
-    calendar/       # calendar + recurrence expansion
-    timer/         # study timer + session history
-    flashcards/    # decks, study session, card CRUD
-    input/         # comprehensible input log
-    journal/       # writing journal
-    drills/        # sentence production drills
-    patterns/      # pattern library, explorer, spot-the-pattern drill
-    accent/        # speaking/accent log + scenario prompts
-    settings/      # reminder settings + the reminder-polling hook
+    dashboard/      # Home
+    roadmap/        # Learn — CEFR roadmap tracker + lessons
+    practice/       # Practice hub (tabs: flashcards/drills/patterns/timer)
+    journalSpeaking/# Journal hub (tabs: journal/speaking/input log)
+    progress/       # Progress hub (achievements + weekly recap)
+    onboarding/      # first-launch welcome flow
+    calendar/       # calendar + recurrence expansion (linked from Home)
+    timer/          # study timer + session history (a Practice tab)
+    flashcards/     # decks, study session, card CRUD (a Practice tab)
+    input/          # comprehensible input log (a Journal tab)
+    journal/        # writing journal (a Journal tab)
+    drills/         # sentence production drills (a Practice tab)
+    patterns/       # pattern library, spot-the-pattern drill (a Practice tab)
+    accent/         # speaking/accent log + scenario prompts (a Journal tab)
+    settings/       # reminders, weekly recap toggle, backup & restore
 ```
 
 Each feature folder is self-contained (its own page component(s)); shared
-logic lives in `lib/`. This is meant to make it easy to keep extending —
-e.g. a new feature is a new folder plus a route in `App.tsx`.
+logic lives in `lib/`. The five hub-style destinations (Practice, Journal,
+Progress, plus Home/Learn) embed the underlying feature pages as tabs
+rather than owning their own routes, so this is meant to make it easy to
+keep extending — e.g. a new feature is a new folder embedded as a tab (or a
+new route in `App.tsx` for something that doesn't fit a hub).
 
 ## Roadmap (possible future work)
 
-- Export/import (JSON) for backup and moving between devices
 - Optional cloud sync (v2)
 - Push-based reminders via a real backend, if background reliability matters
   enough to justify one

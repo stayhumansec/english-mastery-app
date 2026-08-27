@@ -1,32 +1,19 @@
 import { NavLink } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import {
-  BookOpen,
-  CalendarDays,
-  Home,
-  Layers,
-  Map,
-  Mic,
-  PenLine,
-  Settings,
-  Sparkles,
-  Timer,
-} from 'lucide-react'
+import { Home, Map, PenLine, Settings, Target, Trophy } from 'lucide-react'
 import { FEATURE_COLORS, type FeatureKey } from '../lib/types'
 import PageTransition from '../components/motion/PageTransition'
 import IconBadge from '../components/IconBadge'
 
+// Consolidated down to 6 primary destinations (Part 1 §1). Calendar stays
+// fully functional but is reached via a link from Home instead of a
+// top-level nav slot; Timer lives as a tab inside Practice.
 const NAV_ITEMS: Array<{ to: string; label: string; icon: typeof Home; end?: boolean; feature: FeatureKey }> = [
   { to: '/', label: 'Home', icon: Home, end: true, feature: 'home' },
-  { to: '/roadmap', label: 'Roadmap', icon: Map, feature: 'roadmap' },
-  { to: '/calendar', label: 'Calendar', icon: CalendarDays, feature: 'calendar' },
-  { to: '/timer', label: 'Timer', icon: Timer, feature: 'timer' },
-  { to: '/flashcards', label: 'Flashcards', icon: Layers, feature: 'flashcards' },
-  { to: '/input', label: 'Input Log', icon: BookOpen, feature: 'input' },
-  { to: '/journal', label: 'Journal', icon: PenLine, feature: 'journal' },
-  { to: '/drills', label: 'Drills', icon: Sparkles, feature: 'drills' },
-  { to: '/patterns', label: 'Patterns', icon: Sparkles, feature: 'patterns' },
-  { to: '/accent', label: 'Speaking', icon: Mic, feature: 'accent' },
+  { to: '/learn', label: 'Learn', icon: Map, feature: 'learn' },
+  { to: '/practice', label: 'Practice', icon: Target, feature: 'practice' },
+  { to: '/journal-speaking', label: 'Journal', icon: PenLine, feature: 'journalSpeaking' },
+  { to: '/progress', label: 'Progress', icon: Trophy, feature: 'progress' },
   { to: '/settings', label: 'Settings', icon: Settings, feature: 'settings' },
 ]
 

@@ -62,6 +62,16 @@ const ROADMAP_SEED: Array<[CefrLevel, Array<[string, string]>]> = [
   ],
 ]
 
+/** Genuine professional/cybersecurity-adjacent connections for a handful of
+ * modules — left unset everywhere else rather than forced onto every
+ * module (Part 2 §6). Keyed by exact module title. */
+const MODULE_RELEVANCE_NOTES: Record<string, string> = {
+  'Passive Voice & Reported Speech': 'Useful for: writing objective, professional incident/security reports.',
+  'Register & Nuance': 'Useful for: switching tone between casual team chats and formal client/vendor emails.',
+  'Professional & Work English': 'Useful for: writing clearer incident reports and client communications.',
+  'Debating & Persuasion': 'Useful for: making the case for a security fix or budget to stakeholders.',
+}
+
 type FlashcardSeedEntry = Omit<
   Flashcard,
   'id' | 'createdAt' | 'patternId' | keyof ReturnType<typeof newCardScheduleDefaults>
@@ -69,32 +79,32 @@ type FlashcardSeedEntry = Omit<
 
 const FLASHCARD_SEED: FlashcardSeedEntry[] = [
   // Everyday Vocabulary
-  { deck: 'Everyday Vocabulary', level: 'A1', front: 'errand', back: 'a short trip to do a specific task', example: 'I need to run a few errands before lunch.', tags: ['noun'] },
-  { deck: 'Everyday Vocabulary', level: 'A2', front: 'commute', back: 'to travel regularly to and from work', example: 'She commutes to the city by train every day.', tags: ['verb'] },
-  { deck: 'Everyday Vocabulary', level: 'A2', front: 'exhausted', back: 'very tired', example: 'I was exhausted after the long shift.', tags: ['adjective'] },
+  { deck: 'Everyday Vocabulary', level: 'A1', front: 'errand', back: 'a short trip to do a specific task', example: 'I need to run a few errands before lunch.', tags: ['noun'], frequencyTier: 'top3000', collocations: ['run an errand', 'quick errand'] },
+  { deck: 'Everyday Vocabulary', level: 'A2', front: 'commute', back: 'to travel regularly to and from work', example: 'She commutes to the city by train every day.', tags: ['verb'], frequencyTier: 'top5000', collocations: ['daily commute', 'long commute'] },
+  { deck: 'Everyday Vocabulary', level: 'A2', front: 'exhausted', back: 'very tired', example: 'I was exhausted after the long shift.', tags: ['adjective'], frequencyTier: 'top3000', collocations: ['completely exhausted', 'utterly exhausted'] },
   // Idioms & Phrasal Verbs
-  { deck: 'Idioms & Phrasal Verbs', level: 'B1', front: 'give up', back: 'to stop trying', example: "Don't give up, you're almost there.", tags: ['phrasal verb'] },
-  { deck: 'Idioms & Phrasal Verbs', level: 'B2', front: 'hit the books', back: 'to study hard', example: 'I have an exam tomorrow, so I need to hit the books.', tags: ['idiom'] },
-  { deck: 'Idioms & Phrasal Verbs', level: 'B2', front: 'under the weather', back: 'feeling slightly ill', example: "I'm a bit under the weather today.", tags: ['idiom'] },
-  { deck: 'Idioms & Phrasal Verbs', level: 'B1', front: 'look forward to', back: 'to feel excited about something in the future', example: 'I look forward to hearing from you.', tags: ['phrase'] },
+  { deck: 'Idioms & Phrasal Verbs', level: 'B1', front: 'give up', back: 'to stop trying', example: "Don't give up, you're almost there.", tags: ['phrasal verb'], frequencyTier: 'top1000' },
+  { deck: 'Idioms & Phrasal Verbs', level: 'B2', front: 'hit the books', back: 'to study hard', example: 'I have an exam tomorrow, so I need to hit the books.', tags: ['idiom'], frequencyTier: 'beyond' },
+  { deck: 'Idioms & Phrasal Verbs', level: 'B2', front: 'under the weather', back: 'feeling slightly ill', example: "I'm a bit under the weather today.", tags: ['idiom'], frequencyTier: 'beyond' },
+  { deck: 'Idioms & Phrasal Verbs', level: 'B1', front: 'look forward to', back: 'to feel excited about something in the future', example: 'I look forward to hearing from you.', tags: ['phrase'], frequencyTier: 'top1000' },
   // Professional/Work English
-  { deck: 'Professional/Work English', level: 'B2', front: 'circle back', back: "to return to a topic or person later", example: "Let's circle back to this next week.", tags: ['workplace'] },
-  { deck: 'Professional/Work English', level: 'B2', front: 'touch base', back: 'to make brief contact to check on progress', example: 'Can we touch base tomorrow morning?', tags: ['workplace'] },
-  { deck: 'Professional/Work English', level: 'C1', front: 'bandwidth', back: 'capacity/time to take on more work', example: "I don't have the bandwidth for another project right now.", tags: ['workplace'] },
+  { deck: 'Professional/Work English', level: 'B2', front: 'circle back', back: "to return to a topic or person later", example: "Let's circle back to this next week.", tags: ['workplace'], frequencyTier: 'beyond' },
+  { deck: 'Professional/Work English', level: 'B2', front: 'touch base', back: 'to make brief contact to check on progress', example: 'Can we touch base tomorrow morning?', tags: ['workplace'], frequencyTier: 'beyond' },
+  { deck: 'Professional/Work English', level: 'C1', front: 'bandwidth', back: 'capacity/time to take on more work', example: "I don't have the bandwidth for another project right now.", tags: ['workplace'], frequencyTier: 'top5000', collocations: ['available bandwidth', 'have the bandwidth'] },
   // Pronunciation Minimal Pairs
-  { deck: 'Pronunciation Minimal Pairs', level: 'A2', front: 'ship / sheep', back: '/ɪ/ vs /iː/ — short vs long vowel', example: 'The ship carried a ship-load of sheep.', tags: ['minimal pair'] },
-  { deck: 'Pronunciation Minimal Pairs', level: 'A2', front: 'think / sink', back: '/θ/ vs /s/ — dental fricative vs alveolar', example: 'I think the boat will sink.', tags: ['minimal pair'] },
-  { deck: 'Pronunciation Minimal Pairs', level: 'B1', front: 'live / leave', back: '/ɪ/ vs /iː/', example: 'I live here, but I will leave tomorrow.', tags: ['minimal pair'] },
-  { deck: 'Pronunciation Minimal Pairs', level: 'B1', front: 'bat / bad', back: 'final /t/ (unvoiced) vs /d/ (voiced)', example: 'He hit the ball with the bat, which was bad luck.', tags: ['minimal pair'] },
+  { deck: 'Pronunciation Minimal Pairs', level: 'A2', front: 'ship / sheep', back: '/ɪ/ vs /iː/ — short vs long vowel', example: 'The ship carried a ship-load of sheep.', tags: ['minimal pair'], frequencyTier: null },
+  { deck: 'Pronunciation Minimal Pairs', level: 'A2', front: 'think / sink', back: '/θ/ vs /s/ — dental fricative vs alveolar', example: 'I think the boat will sink.', tags: ['minimal pair'], frequencyTier: null },
+  { deck: 'Pronunciation Minimal Pairs', level: 'B1', front: 'live / leave', back: '/ɪ/ vs /iː/', example: 'I live here, but I will leave tomorrow.', tags: ['minimal pair'], frequencyTier: null },
+  { deck: 'Pronunciation Minimal Pairs', level: 'B1', front: 'bat / bad', back: 'final /t/ (unvoiced) vs /d/ (voiced)', example: 'He hit the ball with the bat, which was bad luck.', tags: ['minimal pair'], frequencyTier: null },
   // Sentence Patterns
-  { deck: 'Sentence Patterns', level: 'A2', front: 'It takes ___ (time) to ___', back: 'pattern for describing duration of an action', example: 'It takes twenty minutes to walk there.', tags: ['pattern'] },
-  { deck: 'Sentence Patterns', level: 'B1', front: 'I used to ___', back: 'pattern for past habits that no longer happen', example: 'I used to play tennis every weekend.', tags: ['pattern'] },
-  { deck: 'Sentence Patterns', level: 'B1', front: 'have/has + past participle + since/for', back: 'Present Perfect for something that started in the past and continues now', example: 'I have lived here for three years.', tags: ['grammar-in-context'], linkPatternName: 'Present Perfect for unfinished time' },
-  { deck: 'Sentence Patterns', level: 'B1', front: 'If + present simple, ... will + verb', back: 'First Conditional — a real, likely future possibility', example: 'If it rains, we will stay home.', tags: ['grammar-in-context'], linkPatternName: 'First Conditional (real future possibility)' },
-  { deck: 'Sentence Patterns', level: 'B2', front: 'If + past simple, ... would + verb', back: 'Second Conditional — a hypothetical present situation', example: 'If I had more time, I would travel more.', tags: ['grammar-in-context'], linkPatternName: 'Second Conditional (hypothetical present)' },
+  { deck: 'Sentence Patterns', level: 'A2', front: 'It takes ___ (time) to ___', back: 'pattern for describing duration of an action', example: 'It takes twenty minutes to walk there.', tags: ['pattern'], frequencyTier: null },
+  { deck: 'Sentence Patterns', level: 'B1', front: 'I used to ___', back: 'pattern for past habits that no longer happen', example: 'I used to play tennis every weekend.', tags: ['pattern'], frequencyTier: null },
+  { deck: 'Sentence Patterns', level: 'B1', front: 'have/has + past participle + since/for', back: 'Present Perfect for something that started in the past and continues now', example: 'I have lived here for three years.', tags: ['grammar-in-context'], frequencyTier: null, linkPatternName: 'Present Perfect for unfinished time' },
+  { deck: 'Sentence Patterns', level: 'B1', front: 'If + present simple, ... will + verb', back: 'First Conditional — a real, likely future possibility', example: 'If it rains, we will stay home.', tags: ['grammar-in-context'], frequencyTier: null, linkPatternName: 'First Conditional (real future possibility)' },
+  { deck: 'Sentence Patterns', level: 'B2', front: 'If + past simple, ... would + verb', back: 'Second Conditional — a hypothetical present situation', example: 'If I had more time, I would travel more.', tags: ['grammar-in-context'], frequencyTier: null, linkPatternName: 'Second Conditional (hypothetical present)' },
   // Collocations
-  { deck: 'Collocations', level: 'B1', front: 'make a decision', back: 'not "take" — the correct collocation with decision', example: 'We need to make a decision by Friday.', tags: ['collocation'] },
-  { deck: 'Collocations', level: 'B2', front: 'heavy traffic', back: '"heavy", not "big/strong", collocates with traffic', example: 'There was heavy traffic on the way home.', tags: ['collocation'] },
+  { deck: 'Collocations', level: 'B1', front: 'make a decision', back: 'not "take" — the correct collocation with decision', example: 'We need to make a decision by Friday.', tags: ['collocation'], frequencyTier: 'top1000', collocations: ['make a decision', 'difficult decision', 'decision-making process'] },
+  { deck: 'Collocations', level: 'B2', front: 'heavy traffic', back: '"heavy", not "big/strong", collocates with traffic', example: 'There was heavy traffic on the way home.', tags: ['collocation'], frequencyTier: 'top3000', collocations: ['heavy traffic', 'traffic jam'] },
 ]
 
 export async function seedIfEmpty(): Promise<void> {
@@ -131,6 +141,7 @@ export async function seedIfEmpty(): Promise<void> {
             notes: '',
             order: order++,
             createdAt: Date.now(),
+            relevanceNote: MODULE_RELEVANCE_NOTES[title] ?? null,
           })
         }
       }

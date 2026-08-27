@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import Confetti from './motion/Confetti'
+import { awardXp } from '../lib/xp'
+import { evaluateBadges } from '../lib/badges'
 import { FEATURE_COLORS, type RecognitionToken } from '../lib/types'
 
 export default function SpotThePattern({
@@ -37,6 +39,8 @@ export default function SpotThePattern({
   const handleSubmit = () => {
     setSubmitted(true)
     if (perfect) setBurst((b) => b + 1)
+    awardXp('drill_spot_pattern')
+    evaluateBadges()
   }
 
   return (

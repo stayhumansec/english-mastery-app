@@ -299,6 +299,7 @@ export const PATTERN_SEED: Array<Omit<Pattern, 'id' | 'createdAt'>> = [
     ruleExplanation: 'A past reporting verb ("said") pulls the reported verb one tense back in time too — present becomes past, past becomes past perfect.',
     contrastWrong: 'She said that she is tired.',
     contrastNote: 'When the reporting verb is in the past ("said"), the reported verb usually shifts one tense back too.',
+    relevanceNote: 'Useful for: summarizing what a client or colleague said in written notes.',
   },
   {
     name: 'Second Conditional (hypothetical present)',

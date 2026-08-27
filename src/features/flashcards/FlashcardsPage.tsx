@@ -8,26 +8,45 @@ import { newCardScheduleDefaults, scheduleReview } from '../../lib/sm2'
 import Confetti from '../../components/motion/Confetti'
 import { useToast } from '../../components/motion/ToastProvider'
 import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
+import { awardXp } from '../../lib/xp'
+import { evaluateBadges } from '../../lib/badges'
 import {
   CEFR_LEVELS,
   DECK_COLORS,
   DECKS,
+  FREQUENCY_TIERS,
+  FREQUENCY_TIER_LABELS,
   type CefrLevel,
   type DeckName,
   type Flashcard,
+  type FrequencyTier,
   type ReviewGrade,
 } from '../../lib/types'
 import { Layers, Pencil, Plus, Trash2 } from 'lucide-react'
+
+const FREQUENCY_RANK: Record<FrequencyTier, number> = { top1000: 0, top3000: 1, top5000: 2, beyond: 3 }
+const PRIORITIZE_FREQUENCY_KEY = 'english-mastery:prioritize-frequency'
 
 export default function FlashcardsPage() {
   const cards = useLiveQuery(() => db.flashcards.toArray(), [])
   const [studyDeck, setStudyDeck] = useState<DeckName | 'all' | null>(null)
   const [managingDeck, setManagingDeck] = useState<DeckName | null>(null)
+  const [prioritizeFrequency, setPrioritizeFrequency] = useState(
+    () => localStorage.getItem(PRIORITIZE_FREQUENCY_KEY) === '1',
+  )
+
+  const togglePrioritize = () => {
+    setPrioritizeFrequency((v) => {
+      const next = !v
+      localStorage.setItem(PRIORITIZE_FREQUENCY_KEY, next ? '1' : '0')
+      return next
+    })
+  }
 
   if (!cards) return <p className="text-sm text-[var(--text-muted)]">Loading…</p>
 
   if (studyDeck) {
-    return <StudySession deck={studyDeck} cards={cards} onExit={() => setStudyDeck(null)} />
+    return <StudySession deck={studyDeck} cards={cards} prioritizeFrequency={prioritizeFrequency} onExit={() => setStudyDeck(null)} />
   }
 
   if (managingDeck) {
@@ -45,10 +64,10 @@ export default function FlashcardsPage() {
 
   return (
     <motion.div className="space-y-6" variants={staggerContainer} initial="hidden" animate="show">
-      <motion.div variants={fadeUpItem} className="flex items-center justify-between">
+      <motion.div variants={fadeUpItem} className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-black">Flashcards 🃏</h1>
-          <p className="text-sm font-medium text-[var(--text-muted)]">{dueTotal} card(s) due today across all decks</p>
+          <h1 className="page-title">Flashcards 🃏</h1>
+          <p className="body-text text-[var(--text-muted)]">{dueTotal} card(s) due today across all decks</p>
         </div>
         {dueTotal > 0 && (
           <button onClick={() => setStudyDeck('all')} className="btn btn-primary px-4 py-2 text-sm">
@@ -56,6 +75,11 @@ export default function FlashcardsPage() {
           </button>
         )}
       </motion.div>
+
+      <motion.label variants={fadeUpItem} className="flex w-fit items-center gap-2 text-xs font-semibold text-[var(--text-muted)]">
+        <input type="checkbox" checked={prioritizeFrequency} onChange={togglePrioritize} />
+        Prioritize high-frequency words when studying
+      </motion.label>
 
       <div className="grid gap-3 sm:grid-cols-2">
         {DECKS.map((deck) => {
@@ -103,17 +127,25 @@ export default function FlashcardsPage() {
 function StudySession({
   deck,
   cards,
+  prioritizeFrequency,
   onExit,
 }: {
   deck: DeckName | 'all'
   cards: Flashcard[]
+  prioritizeFrequency: boolean
   onExit: () => void
 }) {
   const today = todayIso()
-  const queue = useMemo(
-    () => cards.filter((c) => c.dueDate <= today && (deck === 'all' || c.deck === deck)),
-    [cards, deck, today],
-  )
+  const queue = useMemo(() => {
+    const due = cards.filter((c) => c.dueDate <= today && (deck === 'all' || c.deck === deck))
+    if (!prioritizeFrequency) return due
+    return [...due].sort((a, b) => {
+      const rankA = a.frequencyTier ? FREQUENCY_RANK[a.frequencyTier] : 99
+      const rankB = b.frequencyTier ? FREQUENCY_RANK[b.frequencyTier] : 99
+      return rankA - rankB
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cards, deck, today, prioritizeFrequency])
   const [index, setIndex] = useState(0)
   const [flipped, setFlipped] = useState(false)
   const [burst, setBurst] = useState(0)
@@ -129,6 +161,8 @@ function StudySession({
     if (!card) return
     const update = scheduleReview(card, g)
     await db.flashcards.update(card.id, update)
+    await awardXp(g === 'easy' ? 'flashcard_review_easy' : 'flashcard_review', card.id)
+    await evaluateBadges()
     setFlipped(false)
     if (index + 1 >= queue.length) {
       setBurst((b) => b + 1)
@@ -182,6 +216,18 @@ function StudySession({
             <p className="text-lg font-bold">{card.back}</p>
             {card.example && <p className="text-sm italic text-[var(--text-muted)]">"{card.example}"</p>}
             {card.audioNote && <p className="text-xs text-[var(--text-muted)]">🔊 {card.audioNote}</p>}
+            {card.collocations && card.collocations.length > 0 && (
+              <div className="max-w-full space-y-1 text-center">
+                <p className="meta-label">Commonly used with</p>
+                <div className="flex flex-wrap justify-center gap-1">
+                  {card.collocations.map((phrase) => (
+                    <span key={phrase} className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: 'var(--surface-alt)', color: 'var(--text-muted)' }}>
+                      {phrase}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             {linkedPattern && (
               <div className="mt-1 rounded-xl p-2 text-xs" style={{ background: 'var(--purple-soft)' }}>
                 <span className="font-bold" style={{ color: 'var(--purple)' }}>Why this works: </span>
@@ -214,6 +260,7 @@ function ManageDeck({
   onBack: () => void
 }) {
   const [editing, setEditing] = useState<Flashcard | 'new' | null>(null)
+  const [tierFilter, setTierFilter] = useState<FrequencyTier | 'all'>('all')
   const color = DECK_COLORS[deck]
 
   const remove = async (id: string) => {
@@ -230,6 +277,8 @@ function ManageDeck({
     )
   }
 
+  const visibleCards = tierFilter === 'all' ? cards : cards.filter((c) => c.frequencyTier === tierFilter)
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -238,13 +287,35 @@ function ManageDeck({
           <Plus size={14} /> New card
         </button>
       </div>
-      <h1 className="text-xl font-black" style={{ color }}>{deck}</h1>
+      <h1 className="page-title" style={{ color }}>{deck}</h1>
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setTierFilter('all')}
+          className="rounded-full px-2.5 py-1 text-xs font-bold"
+          style={tierFilter === 'all' ? { background: color, color: 'white' } : { background: 'var(--surface-alt)', color: 'var(--text-muted)' }}
+        >
+          All
+        </button>
+        {FREQUENCY_TIERS.map((tier) => (
+          <button
+            key={tier}
+            onClick={() => setTierFilter(tier)}
+            className="rounded-full px-2.5 py-1 text-xs font-bold"
+            style={tierFilter === tier ? { background: color, color: 'white' } : { background: 'var(--surface-alt)', color: 'var(--text-muted)' }}
+          >
+            {FREQUENCY_TIER_LABELS[tier]}
+          </button>
+        ))}
+      </div>
+
       <div className="space-y-2">
-        {cards.map((c) => (
+        {visibleCards.map((c) => (
           <div key={c.id} className="card flex items-center justify-between p-3">
             <div>
               <p className="font-bold">{c.front}</p>
               <p className="text-sm text-[var(--text-muted)]">{c.back}</p>
+              {c.frequencyTier && <p className="meta-label mt-1">{FREQUENCY_TIER_LABELS[c.frequencyTier]}</p>}
             </div>
             <div className="flex gap-2">
               <button onClick={() => setEditing(c)} className="text-[var(--text-muted)] hover:text-[var(--text)]">
@@ -256,7 +327,7 @@ function ManageDeck({
             </div>
           </div>
         ))}
-        {cards.length === 0 && <p className="text-sm text-[var(--text-muted)]">No cards yet in this deck.</p>}
+        {visibleCards.length === 0 && <p className="text-sm text-[var(--text-muted)]">No cards match this filter.</p>}
       </div>
     </div>
   )
@@ -277,13 +348,26 @@ function CardForm({
   const [audioNote, setAudioNote] = useState(card?.audioNote ?? '')
   const [level, setLevel] = useState<CefrLevel>(card?.level ?? 'A1')
   const [tags, setTags] = useState(card?.tags.join(', ') ?? '')
+  const [frequencyTier, setFrequencyTier] = useState<FrequencyTier | ''>(card?.frequencyTier ?? '')
+  const [collocations, setCollocations] = useState(card?.collocations?.join(', ') ?? '')
   const color = DECK_COLORS[deck]
 
   const save = async () => {
     if (!front.trim() || !back.trim()) return
     const tagList = tags.split(',').map((t) => t.trim()).filter(Boolean)
+    const collocationList = collocations.split(',').map((t) => t.trim()).filter(Boolean)
+    const patch = {
+      front,
+      back,
+      example,
+      audioNote,
+      level,
+      tags: tagList,
+      frequencyTier: frequencyTier || null,
+      collocations: collocationList,
+    }
     if (card) {
-      await db.flashcards.update(card.id, { front, back, example, audioNote, level, tags: tagList })
+      await db.flashcards.update(card.id, patch)
     } else {
       await db.flashcards.add({
         id: uuid(),
@@ -294,6 +378,8 @@ function CardForm({
         example: example.trim(),
         audioNote: audioNote.trim() || undefined,
         tags: tagList,
+        frequencyTier: frequencyTier || null,
+        collocations: collocationList,
         createdAt: Date.now(),
         ...newCardScheduleDefaults(),
       })
@@ -304,7 +390,7 @@ function CardForm({
   return (
     <div className="mx-auto max-w-md space-y-3">
       <button onClick={onDone} className="text-sm font-semibold text-[var(--text-muted)]">← Cancel</button>
-      <h1 className="text-xl font-black" style={{ color }}>{card ? 'Edit card' : 'New card'} — {deck}</h1>
+      <h1 className="page-title" style={{ color }}>{card ? 'Edit card' : 'New card'} — {deck}</h1>
       <input
         value={front}
         onChange={(e) => setFront(e.target.value)}
@@ -347,6 +433,24 @@ function CardForm({
           className="flex-1 rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
         />
       </div>
+      <div className="flex gap-2">
+        <select
+          value={frequencyTier}
+          onChange={(e) => setFrequencyTier(e.target.value as FrequencyTier | '')}
+          className="flex-1 rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+        >
+          <option value="">Frequency tier (optional)</option>
+          {FREQUENCY_TIERS.map((tier) => (
+            <option key={tier} value={tier}>{FREQUENCY_TIER_LABELS[tier]}</option>
+          ))}
+        </select>
+      </div>
+      <input
+        value={collocations}
+        onChange={(e) => setCollocations(e.target.value)}
+        placeholder="Collocations, comma-separated (optional)"
+        className="w-full rounded-xl border-2 border-[var(--border)] bg-transparent px-3 py-2 text-sm"
+      />
       <button onClick={save} className="btn btn-primary w-full py-2 text-sm">
         Save card
       </button>

@@ -9,7 +9,15 @@ import PatternText from '../../components/PatternText'
 import Confetti from '../../components/motion/Confetti'
 import { useToast } from '../../components/motion/ToastProvider'
 import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
-import { FEATURE_COLORS, type DrillAttempt, type DrillConfidence, type Pattern } from '../../lib/types'
+import { awardXp } from '../../lib/xp'
+import { evaluateBadges } from '../../lib/badges'
+import { FEATURE_COLORS, type DrillAttempt, type DrillConfidence, type DrillSelfCheck, type Pattern, type SelfCheckAnswer } from '../../lib/types'
+
+const SELF_CHECK_QUESTIONS: Array<{ key: keyof DrillSelfCheck; label: string }> = [
+  { key: 'grammarCorrect', label: 'Was your grammar correct?' },
+  { key: 'soundsNatural', label: 'Did it sound natural, the way a native speaker would phrase it?' },
+  { key: 'rightRegister', label: 'Was the tone/formality right for the scenario?' },
+]
 
 const SESSION_SIZE = 4
 
@@ -33,6 +41,8 @@ export default function DrillsPage() {
   const [sentence, setSentence] = useState('')
   const [burst, setBurst] = useState(0)
   const [feedbackFor, setFeedbackFor] = useState<QueueItem | null>(null)
+  const [pendingAttemptId, setPendingAttemptId] = useState<string | null>(null)
+  const [selfCheck, setSelfCheck] = useState<Partial<DrillSelfCheck>>({})
   const { showToast } = useToast()
   const color = FEATURE_COLORS.drills
 
@@ -70,6 +80,7 @@ export default function DrillsPage() {
 
   const submit = async (confidence: DrillConfidence) => {
     if (!current || !sentence.trim()) return
+    const id = current.attemptId ?? uuid()
     if (current.attemptId) {
       await db.drillAttempts.update(current.attemptId, {
         sentence: sentence.trim(),
@@ -78,7 +89,7 @@ export default function DrillsPage() {
       })
     } else {
       await db.drillAttempts.add({
-        id: uuid(),
+        id,
         date: todayIso(),
         patternId: current.pattern?.id,
         promptContext: current.promptContext,
@@ -89,11 +100,27 @@ export default function DrillsPage() {
     }
     // Show a model example before advancing — the "feedback" a teacher
     // would give even without live grading.
+    setPendingAttemptId(id)
+    setSelfCheck({})
     setFeedbackFor(current)
   }
 
-  const goNext = () => {
+  const answerSelfCheck = (key: keyof DrillSelfCheck, value: SelfCheckAnswer) => {
+    setSelfCheck((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const selfCheckComplete =
+    !!selfCheck.grammarCorrect && !!selfCheck.soundsNatural && !!selfCheck.rightRegister
+
+  const goNext = async () => {
+    if (pendingAttemptId && selfCheckComplete) {
+      await db.drillAttempts.update(pendingAttemptId, { selfCheck: selfCheck as DrillSelfCheck })
+      await awardXp('drill_sentence', pendingAttemptId)
+      await evaluateBadges()
+    }
     setFeedbackFor(null)
+    setPendingAttemptId(null)
+    setSelfCheck({})
     setSentence('')
     if (index + 1 >= queue.length) {
       setSessionStarted(false)
@@ -113,8 +140,8 @@ export default function DrillsPage() {
     <motion.div className="relative space-y-6" variants={staggerContainer} initial="hidden" animate="show">
       <Confetti trigger={burst} />
       <motion.div variants={fadeUpItem}>
-        <h1 className="text-2xl font-black" style={{ color }}>Sentence Production Drills ✨</h1>
-        <p className="text-sm font-medium text-[var(--text-muted)]">
+        <h1 className="page-title" style={{ color }}>Sentence Production Drills ✨</h1>
+        <p className="body-text text-[var(--text-muted)]">
           Write your own sentence — free production, not fill-in-the-blank. 3-5 per session.
         </p>
       </motion.div>
@@ -191,7 +218,38 @@ export default function DrillsPage() {
                   <p className="text-xs text-[var(--text-muted)]">Compare it with your sentence — what's different?</p>
                 </div>
               )}
-              <button onClick={goNext} className="btn w-full py-2 text-sm text-white" style={{ background: color }}>
+
+              <div className="card space-y-3 p-3">
+                <p className="section-header text-sm">Quick self-check</p>
+                {SELF_CHECK_QUESTIONS.map((q) => (
+                  <div key={q.key} className="space-y-1.5">
+                    <p className="body-text text-sm">{q.label}</p>
+                    <div className="flex gap-2">
+                      {(['yes', 'no', 'unsure'] as SelfCheckAnswer[]).map((option) => (
+                        <button
+                          key={option}
+                          onClick={() => answerSelfCheck(q.key, option)}
+                          className="rounded-full px-3 py-1 text-xs font-bold capitalize"
+                          style={
+                            selfCheck[q.key] === option
+                              ? { background: color, color: 'white' }
+                              : { background: 'var(--surface-alt)', color: 'var(--text-muted)' }
+                          }
+                        >
+                          {option === 'unsure' ? 'Not sure' : option}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={goNext}
+                disabled={!selfCheckComplete}
+                className="btn w-full py-2 text-sm text-white disabled:opacity-40"
+                style={{ background: color }}
+              >
                 Next sentence
               </button>
             </div>

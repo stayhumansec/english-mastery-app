@@ -9,12 +9,30 @@ import { expandOccurrences } from '../calendar/occurrences'
 import ProgressBar from '../../components/ProgressBar'
 import PatternText from '../../components/PatternText'
 import IconBadge from '../../components/IconBadge'
+import Mascot from '../../components/Mascot'
 import AnimatedNumber from '../../components/motion/AnimatedNumber'
 import Confetti from '../../components/motion/Confetti'
 import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
 import { ensureWeeklyFocus, patternsForModule } from '../../lib/weeklyFocus'
+import { levelProgress } from '../../lib/xpConfig'
+import { computeWeakSpots, type WeakSpot } from '../../lib/weakSpots'
+import { computeStaleModules, type StaleModule } from '../../lib/staleness'
 import { CATEGORY_COLORS, CEFR_LEVELS, FEATURE_COLORS, type ActivityCategory } from '../../lib/types'
-import { BookOpen, Check, Flame, GraduationCap, Layers, Mic, PenLine, Sparkles, Sun, Timer } from 'lucide-react'
+import {
+  BookOpen,
+  CalendarDays,
+  Check,
+  Flame,
+  GraduationCap,
+  Layers,
+  Mic,
+  PenLine,
+  RefreshCcw,
+  Sparkles,
+  Sun,
+  Timer,
+  Zap,
+} from 'lucide-react'
 
 export default function Dashboard() {
   const modules = useLiveQuery(() => db.modules.toArray(), [])
@@ -27,11 +45,16 @@ export default function Dashboard() {
   const drillAttempts = useLiveQuery(() => db.drillAttempts.toArray(), [])
   const patterns = useLiveQuery(() => db.patterns.toArray(), [])
   const scenarioPrompts = useLiveQuery(() => db.scenarioPrompts.toArray(), [])
+  const xpEntries = useLiveQuery(() => db.xpLog.toArray(), [])
 
   const [weeklyFocusModuleId, setWeeklyFocusModuleId] = useState<string | null>(null)
+  const [weakSpot, setWeakSpot] = useState<WeakSpot | null>(null)
+  const [staleModules, setStaleModules] = useState<StaleModule[]>([])
 
   useEffect(() => {
     ensureWeeklyFocus().then(setWeeklyFocusModuleId)
+    computeWeakSpots().then((spots) => setWeakSpot(spots[0] ?? null))
+    computeStaleModules().then(setStaleModules)
   }, [])
 
   const today = todayIso()
@@ -52,6 +75,8 @@ export default function Dashboard() {
     sessions?.forEach((s) => s.completedDates.forEach((d) => dates.add(d)))
     return computeStreak(dates)
   }, [timerLogs, accentLogs, sessions])
+
+  const level = levelProgress(xpEntries?.reduce((s, e) => s + e.xpAwarded, 0) ?? 0)
 
   const overallProgress = useMemo(() => {
     if (!modules || modules.length === 0) return 0
@@ -96,78 +121,90 @@ export default function Dashboard() {
     return null
   }, [modules])
 
+  // Single "what do I do right now" action: the learning path takes
+  // priority, then due flashcards, then today's speaking prompt.
+  const primaryAction = nextLesson
+    ? { kind: 'lesson' as const, label: 'Continue learning', title: `${nextLesson.level} — ${nextLesson.title}`, to: `/learn?lesson=${nextLesson.id}`, icon: GraduationCap, color: 'var(--accent)' }
+    : dueFlashcards > 0
+      ? { kind: 'flashcards' as const, label: 'Review due', title: `${dueFlashcards} flashcard${dueFlashcards === 1 ? '' : 's'} due`, to: '/practice?tab=flashcards', icon: Layers, color: 'var(--purple)' }
+      : todaysScenarioPrompt
+        ? { kind: 'speaking' as const, label: "Today's speaking prompt", title: todaysScenarioPrompt.prompt, to: '/journal-speaking?tab=speaking', icon: Mic, color: 'var(--pink)' }
+        : null
+
   return (
-    <motion.div className="space-y-6" variants={staggerContainer} initial="hidden" animate="show">
+    <motion.div className="space-y-5" variants={staggerContainer} initial="hidden" animate="show">
+      {/* Primary: the single next action, answerable in 2 seconds */}
       <motion.div
         variants={fadeUpItem}
-        className="blob-decoration flex items-center gap-3 rounded-2xl p-5"
+        className="blob-decoration card p-5"
         style={{
-          backgroundImage: 'linear-gradient(120deg, var(--accent-soft), var(--blue-soft) 50%, var(--purple-soft))',
+          backgroundImage: 'linear-gradient(120deg, var(--accent-soft), var(--blue-soft) 55%, var(--purple-soft))',
           ['--blob-color' as string]: 'var(--purple)',
           ['--blob-color-2' as string]: 'var(--accent)',
         }}
       >
-        <div className="blob-content"><IconBadge icon={Sun} color="var(--orange)" size={44} /></div>
-        <div className="blob-content">
-          <h1 className="text-2xl font-black">Welcome back 👋</h1>
-          <p className="text-sm font-medium text-[var(--text-muted)]">
+        <div className="blob-content mb-3 flex items-center gap-2">
+          <IconBadge icon={Sun} color="var(--orange)" size={30} />
+          <p className="section-header text-sm">
             {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
         </div>
-      </motion.div>
 
-      <motion.div variants={fadeUpItem} className="grid gap-3 sm:grid-cols-3">
-        <StatTile
-          value={streak}
-          label="day streak"
-          icon={Flame}
-          color="var(--orange)"
-          bg="var(--orange-soft)"
-        />
-        <StatTile
-          value={dueFlashcards}
-          label="flashcards due"
-          icon={Layers}
-          color="var(--purple)"
-          bg="var(--purple-soft)"
-        />
-        <StatTile
-          value={todaysSessions.length}
-          label="sessions today"
-          icon={Timer}
-          color="var(--blue)"
-          bg="var(--blue-soft)"
-        />
-      </motion.div>
-
-      {nextLesson && (
-        <motion.div variants={fadeUpItem}>
-          <Link
-            to={`/roadmap?lesson=${nextLesson.id}`}
-            className="card flex items-center gap-3 p-4 transition-colors hover:border-[var(--accent)]"
-            style={{ background: 'var(--accent-soft)', borderColor: 'transparent' }}
-          >
-            <IconBadge icon={GraduationCap} color="var(--accent)" size={44} />
-            <div className="flex-1">
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--accent-dark)' }}>Continue learning</p>
-              <p className="font-bold">{nextLesson.level} — {nextLesson.title}</p>
+        {primaryAction ? (
+          <Link to={primaryAction.to} className="blob-content flex items-center gap-4">
+            <IconBadge icon={primaryAction.icon} color={primaryAction.color} size={56} />
+            <div className="min-w-0 flex-1">
+              <p className="meta-label" style={{ color: primaryAction.color }}>{primaryAction.label}</p>
+              <p className="page-title truncate">{primaryAction.title}</p>
             </div>
-            <span className="btn btn-primary px-4 py-2 text-sm">Continue</span>
+            <span className="btn btn-primary shrink-0 px-5 py-2.5 text-sm">Continue</span>
+          </Link>
+        ) : (
+          <div className="blob-content flex items-center gap-4">
+            <Mascot pose="celebrate" size={56} />
+            <div>
+              <p className="page-title">All caught up!</p>
+              <p className="body-text text-[var(--text-muted)]">Nothing urgent right now — great work.</p>
+            </div>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Secondary: compact standing row, not competing with the action above */}
+      <motion.div variants={fadeUpItem} className="grid grid-cols-3 gap-2">
+        <CompactStat value={streak} label="day streak" icon={Flame} color="var(--orange)" />
+        <CompactStat value={level.level} label={`level · ${level.xpIntoLevel}/${level.xpForNextLevel} XP`} icon={Zap} color="var(--yellow)" isLevel />
+        <CompactStat value={todaysSessions.length} label="sessions today" icon={Timer} color="var(--blue)" />
+      </motion.div>
+
+      {/* Tertiary: more detail, checklist, nudges, sessions, progress */}
+      {weakSpot?.pattern && (
+        <motion.div variants={fadeUpItem} className="card flex items-center gap-3 p-3" style={{ background: 'var(--purple-soft)' }}>
+          <IconBadge icon={Sparkles} color="var(--purple)" size={32} />
+          <div className="min-w-0 flex-1">
+            <p className="meta-label" style={{ color: 'var(--purple)' }}>Weak spot</p>
+            <p className="body-text text-sm">{weakSpot.pattern.name} — {weakSpot.score} attempts to revisit</p>
+          </div>
+          <Link to={`/practice?tab=drills&patternId=${weakSpot.patternId}`} className="btn btn-secondary shrink-0 px-3 py-1.5 text-xs">
+            Try again
           </Link>
         </motion.div>
       )}
 
-      <motion.div variants={fadeUpItem} className="flex flex-wrap gap-3">
-        <Link to="/timer" className="btn btn-primary px-4 py-2 text-sm">
-          <Timer size={16} /> Start Timer
-        </Link>
-        <Link to="/flashcards" className="btn btn-secondary px-4 py-2 text-sm">
-          <Layers size={16} /> Review Flashcards
-        </Link>
-        <Link to="/accent" className="btn btn-secondary px-4 py-2 text-sm">
-          <Mic size={16} /> Log Accent Practice
-        </Link>
-      </motion.div>
+      {staleModules.length > 0 && (
+        <motion.div variants={fadeUpItem} className="card flex items-center gap-3 p-3" style={{ background: 'var(--teal-soft)' }}>
+          <IconBadge icon={RefreshCcw} color="var(--teal)" size={32} />
+          <div className="min-w-0 flex-1">
+            <p className="meta-label" style={{ color: 'var(--teal)' }}>Time to refresh</p>
+            <p className="body-text text-sm">
+              "{staleModules[0].module.title}" — last practiced {staleModules[0].daysSincePracticed} days ago
+            </p>
+          </div>
+          <Link to={`/learn?refresh=${staleModules[0].module.id}`} className="btn btn-secondary shrink-0 px-3 py-1.5 text-xs">
+            Refresh
+          </Link>
+        </motion.div>
+      )}
 
       {weeklyFocusModule && (
         <motion.section
@@ -177,16 +214,16 @@ export default function Dashboard() {
         >
           <div className="flex items-center gap-2">
             <IconBadge icon={Sparkles} color="var(--purple)" size={32} />
-            <h2 className="font-bold">This week's practical focus: {weeklyFocusModule.title}</h2>
+            <h2 className="section-header text-sm">This week's practical focus: {weeklyFocusModule.title}</h2>
           </div>
-          {weeklyFocusModule.description && <p className="text-sm text-[var(--text-muted)]">{weeklyFocusModule.description}</p>}
+          {weeklyFocusModule.description && <p className="body-text text-sm text-[var(--text-muted)]">{weeklyFocusModule.description}</p>}
           {focusPatterns.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Related patterns</p>
+              <p className="meta-label">Related patterns</p>
               {focusPatterns.map((p) => (
                 <Link
                   key={p.id}
-                  to="/patterns"
+                  to="/practice?tab=patterns"
                   className="block rounded-xl border-2 border-[var(--border)] p-2 text-sm transition-colors hover:border-[var(--purple)]"
                 >
                   <span className="font-bold">{p.name}</span>{' '}
@@ -199,13 +236,13 @@ export default function Dashboard() {
       )}
 
       <motion.section variants={fadeUpItem} className="card p-4">
-        <h2 className="mb-3 font-bold">Today's practice checklist</h2>
+        <h2 className="section-header mb-3 text-sm">Today's practice checklist</h2>
         <div className="grid gap-2 sm:grid-cols-2">
-          <ChecklistItem to="/input" icon={BookOpen} label="Comprehensible input" done={inputLoggedToday} feature="input" />
-          <ChecklistItem to="/journal" icon={PenLine} label="Writing journal" done={journalDoneToday} feature="journal" />
-          <ChecklistItem to="/drills" icon={Sparkles} label="Sentence production drill" done={drillDoneToday} feature="drills" />
+          <ChecklistItem to="/journal-speaking?tab=input" icon={BookOpen} label="Comprehensible input" done={inputLoggedToday} feature="input" />
+          <ChecklistItem to="/journal-speaking?tab=journal" icon={PenLine} label="Writing journal" done={journalDoneToday} feature="journal" />
+          <ChecklistItem to="/practice?tab=drills" icon={Sparkles} label="Sentence production drill" done={drillDoneToday} feature="drills" />
           <ChecklistItem
-            to="/accent"
+            to="/journal-speaking?tab=speaking"
             icon={Mic}
             label={todaysScenarioPrompt ? `Speaking prompt: ${todaysScenarioPrompt.prompt}` : 'Speaking practice'}
             done={!todaysScenarioPrompt}
@@ -215,9 +252,14 @@ export default function Dashboard() {
       </motion.section>
 
       <motion.section variants={fadeUpItem} className="card p-4">
-        <h2 className="mb-3 font-bold">Today's sessions</h2>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="section-header text-sm">Today's sessions</h2>
+          <Link to="/calendar" className="flex items-center gap-1 text-xs font-bold" style={{ color: 'var(--blue)' }}>
+            <CalendarDays size={14} /> View calendar
+          </Link>
+        </div>
         {todaysSessions.length === 0 && (
-          <p className="text-sm text-[var(--text-muted)]">
+          <p className="body-text text-sm text-[var(--text-muted)]">
             🌱 Nothing scheduled today — add one on the Calendar to keep your streak going!
           </p>
         )}
@@ -236,36 +278,34 @@ export default function Dashboard() {
       </motion.section>
 
       <motion.section variants={fadeUpItem} className="card max-w-sm p-4">
-        <h2 className="mb-2 font-bold">Overall CEFR progress</h2>
+        <h2 className="section-header mb-2 text-sm">Overall CEFR progress</h2>
         <ProgressBar value={overallProgress} thick gradient />
       </motion.section>
     </motion.div>
   )
 }
 
-function StatTile({
+function CompactStat({
   value,
   label,
   icon: Icon,
   color,
-  bg,
+  isLevel = false,
 }: {
   value: number
   label: string
   icon: typeof Flame
   color: string
-  bg: string
+  isLevel?: boolean
 }) {
   return (
-    <motion.div
-      whileHover={{ y: -3 }}
-      className="flex flex-col items-center gap-2 rounded-2xl p-4 text-center"
-      style={{ background: bg, boxShadow: `0 8px 20px -6px ${color}66` }}
-    >
-      <IconBadge icon={Icon} color={color} size={44} />
-      <AnimatedNumber value={value} className="font-display text-3xl font-black" />
-      <p className="text-xs font-bold" style={{ color }}>{label}</p>
-    </motion.div>
+    <div className="flex items-center gap-2 rounded-2xl p-2.5" style={{ background: `${color}14` }}>
+      <IconBadge icon={Icon} color={color} size={30} />
+      <div className="min-w-0">
+        <AnimatedNumber value={value} className="font-display text-lg font-black" />
+        <p className="meta-label truncate" style={{ color }}>{isLevel ? label : label}</p>
+      </div>
+    </div>
   )
 }
 

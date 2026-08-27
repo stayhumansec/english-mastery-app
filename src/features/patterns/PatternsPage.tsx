@@ -1,13 +1,14 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { AlertTriangle, Blocks, Briefcase, Coffee, Feather, ShieldAlert } from 'lucide-react'
+import { AlertTriangle, Blocks, Briefcase, Coffee, Feather, ShieldAlert, TrendingDown } from 'lucide-react'
 import { db } from '../../lib/db'
 import PatternText, { PatternRoleLegend } from '../../components/PatternText'
 import SpotThePattern from '../../components/SpotThePattern'
 import IconBadge from '../../components/IconBadge'
 import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
+import { computeWeakSpots, type WeakSpot } from '../../lib/weakSpots'
 import { CEFR_LEVELS, FEATURE_COLORS, type CefrLevel, type ExampleContext, type Pattern } from '../../lib/types'
 
 const CONTEXT_ICON: Record<ExampleContext, typeof Coffee> = {
@@ -22,6 +23,21 @@ export default function PatternsPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Pattern | null>(null)
+  const [weakSpots, setWeakSpots] = useState<WeakSpot[]>([])
+  const [searchParams] = useSearchParams()
+
+  useEffect(() => {
+    computeWeakSpots().then(setWeakSpots)
+  }, [])
+
+  useEffect(() => {
+    const openId = searchParams.get('openPatternId')
+    if (openId && patterns) {
+      const p = patterns.find((pp) => pp.id === openId)
+      if (p) setSelected(p)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, patterns])
 
   const categories = useMemo(
     () => (patterns ? [...new Set(patterns.map((p) => p.category))].sort() : []),
@@ -47,13 +63,42 @@ export default function PatternsPage() {
   return (
     <motion.div className="space-y-4" variants={staggerContainer} initial="hidden" animate="show">
       <motion.div variants={fadeUpItem}>
-        <h1 className="text-2xl font-black" style={{ color: FEATURE_COLORS.patterns }}>Pattern Library 🧩</h1>
-        <p className="text-sm font-medium text-[var(--text-muted)]">See how the structure works, not just what the rule says.</p>
+        <h1 className="page-title" style={{ color: FEATURE_COLORS.patterns }}>Pattern Library 🧩</h1>
+        <p className="body-text text-[var(--text-muted)]">See how the structure works, not just what the rule says.</p>
       </motion.div>
 
       <motion.div variants={fadeUpItem}>
         <PatternRoleLegend />
       </motion.div>
+
+      {weakSpots.length > 0 && (
+        <motion.section variants={fadeUpItem} className="card space-y-2 p-4">
+          <div className="flex items-center gap-2">
+            <IconBadge icon={TrendingDown} color="var(--orange)" size={30} />
+            <h2 className="section-header text-sm">Weak spots</h2>
+          </div>
+          <div className="space-y-2">
+            {weakSpots.map((spot) => (
+              <div key={spot.patternId} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border-2 border-[var(--border)] p-2">
+                <div>
+                  <p className="text-sm font-bold">{spot.pattern?.name ?? 'Unknown pattern'}</p>
+                  <p className="meta-label">{spot.score} attempts to revisit · last {spot.lastAttemptedDate}</p>
+                </div>
+                <div className="flex gap-2">
+                  {spot.pattern && (
+                    <button onClick={() => setSelected(spot.pattern!)} className="btn btn-secondary px-3 py-1 text-xs">
+                      Review pattern
+                    </button>
+                  )}
+                  <Link to={`/practice?tab=drills&patternId=${spot.patternId}`} className="btn px-3 py-1 text-xs text-white" style={{ background: 'var(--orange)' }}>
+                    Try again
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.section>
+      )}
 
       <motion.div variants={fadeUpItem} className="flex flex-wrap gap-2">
         <input
@@ -135,9 +180,15 @@ function PatternDetail({ pattern, onBack }: { pattern: Pattern; onBack: () => vo
               {pattern.level}
             </span>
           </div>
-          <p className="text-sm font-medium text-[var(--text-muted)]">{pattern.category}</p>
+          <p className="body-text text-sm text-[var(--text-muted)]">{pattern.category}</p>
         </div>
       </motion.div>
+
+      {pattern.relevanceNote && (
+        <motion.p variants={fadeUpItem} className="rounded-xl px-3 py-2 text-xs font-medium text-[var(--text-muted)]" style={{ background: 'var(--surface-alt)' }}>
+          💡 {pattern.relevanceNote}
+        </motion.p>
+      )}
 
       <motion.section variants={fadeUpItem} className="card p-4">
         <h2 className="mb-2 text-sm font-bold text-[var(--text-muted)]">Structure</h2>
@@ -178,7 +229,7 @@ function PatternDetail({ pattern, onBack }: { pattern: Pattern; onBack: () => vo
       </motion.div>
 
       <section className="flex flex-wrap gap-3">
-        <Link to={`/drills?patternId=${pattern.id}`} className="btn px-4 py-2 text-sm text-white" style={{ background: FEATURE_COLORS.patterns }}>
+        <Link to={`/practice?tab=drills&patternId=${pattern.id}`} className="btn px-4 py-2 text-sm text-white" style={{ background: FEATURE_COLORS.patterns }}>
           Practice in Sentence Drills
         </Link>
         {pattern.recognitionParagraph && (
