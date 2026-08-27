@@ -14,7 +14,7 @@ import Confetti from '../../components/motion/Confetti'
 import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
 import { ensureWeeklyFocus, patternsForModule } from '../../lib/weeklyFocus'
 import { CATEGORY_COLORS, CEFR_LEVELS, FEATURE_COLORS, type ActivityCategory } from '../../lib/types'
-import { BookOpen, Check, Flame, GraduationCap, Layers, Mic, PenLine, Sparkles, Timer } from 'lucide-react'
+import { BookOpen, Check, Flame, GraduationCap, Layers, Mic, PenLine, Sparkles, Sun, Timer } from 'lucide-react'
 
 export default function Dashboard() {
   const modules = useLiveQuery(() => db.modules.toArray(), [])
@@ -100,13 +100,20 @@ export default function Dashboard() {
     <motion.div className="space-y-6" variants={staggerContainer} initial="hidden" animate="show">
       <motion.div
         variants={fadeUpItem}
-        className="rounded-2xl p-5"
-        style={{ backgroundImage: 'linear-gradient(120deg, var(--accent-soft), var(--blue-soft) 50%, var(--purple-soft))' }}
+        className="blob-decoration flex items-center gap-3 rounded-2xl p-5"
+        style={{
+          backgroundImage: 'linear-gradient(120deg, var(--accent-soft), var(--blue-soft) 50%, var(--purple-soft))',
+          ['--blob-color' as string]: 'var(--purple)',
+          ['--blob-color-2' as string]: 'var(--accent)',
+        }}
       >
-        <h1 className="text-2xl font-black">Welcome back 👋</h1>
-        <p className="text-sm font-medium text-[var(--text-muted)]">
-          {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-        </p>
+        <div className="blob-content"><IconBadge icon={Sun} color="var(--orange)" size={44} /></div>
+        <div className="blob-content">
+          <h1 className="text-2xl font-black">Welcome back 👋</h1>
+          <p className="text-sm font-medium text-[var(--text-muted)]">
+            {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
+        </div>
       </motion.div>
 
       <motion.div variants={fadeUpItem} className="grid gap-3 sm:grid-cols-3">

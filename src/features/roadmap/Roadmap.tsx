@@ -23,7 +23,26 @@ import {
   type Pattern,
   type RoadmapModule,
 } from '../../lib/types'
-import { Lock, Plus, Trash2 } from 'lucide-react'
+import {
+  AlertTriangle,
+  Briefcase,
+  Coffee,
+  Feather,
+  GraduationCap,
+  Lightbulb,
+  Lock,
+  Map,
+  Plus,
+  Trash2,
+} from 'lucide-react'
+import IconBadge from '../../components/IconBadge'
+import type { ExampleContext } from '../../lib/types'
+
+const CONTEXT_ICON: Record<ExampleContext, typeof Coffee> = {
+  everyday: Coffee,
+  professional: Briefcase,
+  storytelling: Feather,
+}
 
 const STATUS_LABEL: Record<ModuleStatus, string> = {
   not_started: 'Not started',
@@ -110,13 +129,20 @@ export default function Roadmap() {
 
   return (
     <motion.div className="space-y-6" variants={staggerContainer} initial="hidden" animate="show">
-      <motion.div variants={fadeUpItem}>
-        <h1 className="text-2xl font-black">CEFR Roadmap 🗺️</h1>
-        <p className="text-sm font-medium text-[var(--text-muted)]">
-          A guided course, A1 → C2 — work through each level in order.
-        </p>
-        <div className="mt-3 max-w-sm">
-          <ProgressBar value={overall} label="Overall progress" color="var(--accent)" thick />
+      <motion.div
+        variants={fadeUpItem}
+        className="blob-decoration card flex items-center gap-3 p-4"
+        style={{ ['--blob-color' as string]: 'var(--accent)', ['--blob-color-2' as string]: 'var(--purple)' }}
+      >
+        <div className="blob-content"><IconBadge icon={Map} color="var(--accent)" size={44} /></div>
+        <div className="blob-content flex-1">
+          <h1 className="text-2xl font-black">CEFR Roadmap</h1>
+          <p className="text-sm font-medium text-[var(--text-muted)]">
+            A guided course, A1 → C2 — work through each level in order.
+          </p>
+          <div className="mt-3 max-w-sm">
+            <ProgressBar value={overall} label="Overall progress" color="var(--accent)" thick />
+          </div>
         </div>
       </motion.div>
 
@@ -374,36 +400,58 @@ function LessonView({
     showToast('Lesson complete — great work!', '🎓')
   }
 
+  const scrollTo = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const sections = [
+    { id: 'lv-notice', label: 'Notice the pattern' },
+    { id: 'lv-rule', label: 'The rule' },
+    { id: 'lv-practice', label: 'Practice' },
+    { id: 'lv-quiz', label: 'Quick check' },
+  ]
+
   return (
-    <motion.div className="relative mx-auto max-w-2xl space-y-5" variants={staggerContainer} initial="hidden" animate="show">
+    <motion.div className="relative mx-auto max-w-3xl" variants={staggerContainer} initial="hidden" animate="show">
       <Confetti trigger={burst} />
-      <motion.button variants={fadeUpItem} onClick={onBack} className="text-sm font-semibold text-[var(--text-muted)]">
+      <motion.button variants={fadeUpItem} onClick={onBack} className="mb-4 text-sm font-semibold text-[var(--text-muted)]">
         ← Back to Roadmap
       </motion.button>
 
-      <motion.div variants={fadeUpItem}>
-        <div className="flex items-center gap-2">
-          <span className="rounded-full px-2 py-0.5 text-xs font-bold text-white" style={{ background: color }}>
-            {mod.level}
-          </span>
-          {lesson && (
-            <span
-              className="rounded-full px-2 py-0.5 text-xs font-bold text-white"
-              style={{ background: DIFFICULTY_COLORS[lesson.difficulty] }}
-            >
-              {DIFFICULTY_LABELS[lesson.difficulty]}
-            </span>
-          )}
-          {locked && (
-            <span className="flex items-center gap-1 text-xs font-semibold text-[var(--text-muted)]">
-              <Lock size={12} /> Recommended after "{prevModule!.title}"
-            </span>
-          )}
+      <motion.div
+        variants={fadeUpItem}
+        className="blob-decoration card mb-5 flex items-center gap-3 p-4"
+        style={{ ['--blob-color' as string]: color, ['--blob-color-2' as string]: 'var(--blue)' }}
+      >
+        <div className="blob-content">
+          <IconBadge icon={lesson?.icon ?? GraduationCap} color={color} size={48} />
         </div>
-        <h1 className="text-2xl font-black">{mod.title}</h1>
+        <div className="blob-content">
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <span className="rounded-full px-2 py-0.5 text-xs font-bold text-white" style={{ background: color }}>
+              {mod.level}
+            </span>
+            {lesson && (
+              <span
+                className="rounded-full px-2 py-0.5 text-xs font-bold text-white"
+                style={{ background: DIFFICULTY_COLORS[lesson.difficulty] }}
+              >
+                {DIFFICULTY_LABELS[lesson.difficulty]}
+              </span>
+            )}
+            {locked && (
+              <span className="flex items-center gap-1 text-xs font-semibold text-[var(--text-muted)]">
+                <Lock size={12} /> Recommended after "{prevModule!.title}"
+              </span>
+            )}
+          </div>
+          <h1 className="text-2xl font-black">{mod.title}</h1>
+        </div>
       </motion.div>
 
-      {!lesson && (
+      <div className={lesson ? 'grid gap-6 md:grid-cols-[1fr_170px]' : ''}>
+        <div className="space-y-5">
+          {!lesson && (
         <motion.section variants={fadeUpItem} className="card space-y-3 p-4">
           <p className="text-sm text-[var(--text-muted)]">
             📘 Full lesson content for this module is coming soon. In the meantime, here's what's here so far —
@@ -438,21 +486,36 @@ function LessonView({
 
       {lesson && (
         <>
-          <motion.section variants={fadeUpItem} className="space-y-2">
+          <motion.section id="lv-notice" variants={fadeUpItem} className="space-y-2 scroll-mt-4">
             <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color }}>First, notice the pattern</h2>
             <p className="text-xs text-[var(--text-muted)]">
               Read these examples before the rule is explained — see what you can figure out yourself.
             </p>
-            {lesson.examples.map((ex, i) => (
-              <div key={i} className="card p-3">
-                <span className="mb-1 block text-[10px] uppercase tracking-wide text-[var(--text-muted)]">{ex.context}</span>
-                <p className="text-sm">{ex.text}</p>
-              </div>
-            ))}
+            <div className="grid gap-2 sm:grid-cols-2">
+              {lesson.examples.map((ex, i) => {
+                const Icon = CONTEXT_ICON[ex.context]
+                return (
+                  <div key={i} className="card flex items-start gap-2 p-2.5">
+                    <IconBadge icon={Icon} color={color} size={26} />
+                    <div className="min-w-0">
+                      <span className="mb-0.5 block text-[9px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+                        {ex.context}
+                      </span>
+                      <p className="pull-quote text-sm" style={{ ['--quote-color' as string]: color }}>
+                        {ex.text}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </motion.section>
 
-          <motion.section variants={fadeUpItem} className="card space-y-3 p-4" style={{ background: 'var(--blue-soft)' }}>
-            <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color: 'var(--blue)' }}>Think about it</h2>
+          <motion.section variants={fadeUpItem} className="card mt-5 space-y-3 p-4" style={{ background: 'var(--blue-soft)' }}>
+            <div className="flex items-center gap-2">
+              <IconBadge icon={Lightbulb} color="var(--blue)" size={30} />
+              <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color: 'var(--blue)' }}>Think about it</h2>
+            </div>
             <p className="text-sm font-semibold">{lesson.guidedQuestion}</p>
             {!ruleRevealed && (
               <button onClick={() => setRuleRevealed(true)} className="btn px-4 py-1.5 text-sm text-white" style={{ background: 'var(--blue)' }}>
@@ -462,28 +525,40 @@ function LessonView({
           </motion.section>
 
           {ruleRevealed && (
-            <motion.section
+            <motion.div
+              id="lv-rule"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="card space-y-2 p-4"
+              className="mt-5 grid gap-4 scroll-mt-4 md:grid-cols-2"
             >
-              <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color }}>The rule</h2>
-              {lesson.concept.map((para, i) => (
-                <p key={i} className="text-sm leading-relaxed">{para}</p>
-              ))}
-            </motion.section>
+              <section className="card space-y-2 p-4">
+                <div className="flex items-center gap-2">
+                  <IconBadge icon={GraduationCap} color={color} size={30} />
+                  <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color }}>The rule</h2>
+                </div>
+                {lesson.concept.map((para, i) => (
+                  <p key={i} className="text-sm leading-relaxed">{para}</p>
+                ))}
+              </section>
+
+              <section className="card space-y-2 p-4" style={{ background: 'var(--orange-soft)' }}>
+                <div className="flex items-center gap-2">
+                  <IconBadge icon={AlertTriangle} color="var(--orange)" size={30} />
+                  <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color: 'var(--orange)' }}>Watch out for this</h2>
+                </div>
+                <ul className="space-y-2 text-sm">
+                  {lesson.commonMistakes.map((m, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <AlertTriangle size={14} className="mt-0.5 shrink-0" style={{ color: 'var(--orange)' }} />
+                      <span>{m}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </motion.div>
           )}
 
-          <motion.section variants={fadeUpItem} className="card space-y-2 p-4" style={{ background: 'var(--orange-soft)' }}>
-            <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color: 'var(--orange)' }}>Watch out for this</h2>
-            <ul className="list-disc space-y-1 pl-5 text-sm">
-              {lesson.commonMistakes.map((m, i) => (
-                <li key={i}>{m}</li>
-              ))}
-            </ul>
-          </motion.section>
-
-          <motion.section variants={fadeUpItem} className="space-y-3">
+          <motion.section id="lv-practice" variants={fadeUpItem} className="mt-5 space-y-3 scroll-mt-4">
             <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color }}>Practice</h2>
             <div className="flex flex-wrap gap-3">
               {lesson.linkDecks?.map((deck) => (
@@ -506,7 +581,7 @@ function LessonView({
             )}
           </motion.section>
 
-          <motion.section variants={fadeUpItem} className="card space-y-3 p-4">
+          <motion.section id="lv-quiz" variants={fadeUpItem} className="card mt-5 space-y-3 p-4 scroll-mt-4">
             <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color }}>Quick check</h2>
             <Quiz
               questions={lesson.quiz}
@@ -515,7 +590,7 @@ function LessonView({
             />
           </motion.section>
 
-          <motion.section variants={fadeUpItem} className="text-center">
+          <motion.section variants={fadeUpItem} className="mt-5 text-center">
             {mod.status === 'done' ? (
               <p className="font-bold" style={{ color }}>✅ Module complete</p>
             ) : (
@@ -539,6 +614,28 @@ function LessonView({
           </motion.section>
         </>
       )}
+        </div>
+
+        {lesson && (
+          <motion.nav variants={fadeUpItem} className="hidden md:block">
+            <div className="sticky top-4 card space-y-1 p-3">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">On this page</p>
+              {sections.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => scrollTo(s.id)}
+                  className="block w-full rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+                  style={{ background: 'transparent' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-alt)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </motion.nav>
+        )}
+      </div>
     </motion.div>
   )
 }

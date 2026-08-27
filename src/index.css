@@ -122,6 +122,66 @@ h3 {
   flex-shrink: 0;
 }
 
+/* Soft decorative blob behind hero/header sections — set --blob-color on
+   the element to tint it. Purely decorative: clipped, low-opacity, and
+   sits behind content (content needs position:relative + a higher
+   z-index, which .blob-content provides). */
+.blob-decoration {
+  position: relative;
+  overflow: hidden;
+}
+.blob-decoration::before {
+  content: '';
+  position: absolute;
+  top: -70px;
+  right: -60px;
+  width: 240px;
+  height: 240px;
+  border-radius: 999px;
+  background: radial-gradient(circle, var(--blob-color, var(--accent)) 0%, transparent 72%);
+  opacity: 0.22;
+  pointer-events: none;
+  z-index: 0;
+}
+.blob-decoration::after {
+  content: '';
+  position: absolute;
+  bottom: -50px;
+  left: -40px;
+  width: 160px;
+  height: 160px;
+  border-radius: 999px;
+  background: radial-gradient(circle, var(--blob-color-2, var(--blue)) 0%, transparent 72%);
+  opacity: 0.16;
+  pointer-events: none;
+  z-index: 0;
+}
+.blob-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* Highlighted "pull quote" style example sentence — a bold left rule,
+   a large decorative quote mark, and italic emphasis so key examples
+   look distinct rather than identical plain-text cards. */
+.pull-quote {
+  position: relative;
+  padding-left: 0.5rem;
+  border-left: 4px solid var(--quote-color, var(--accent));
+  font-style: italic;
+}
+.pull-quote::before {
+  content: '\201C';
+  position: absolute;
+  left: -0.15rem;
+  top: -0.6rem;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-style: normal;
+  color: var(--quote-color, var(--accent));
+  opacity: 0.35;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -2,11 +2,19 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { AlertTriangle, Blocks, Briefcase, Coffee, Feather, ShieldAlert } from 'lucide-react'
 import { db } from '../../lib/db'
 import PatternText, { PatternRoleLegend } from '../../components/PatternText'
 import SpotThePattern from '../../components/SpotThePattern'
+import IconBadge from '../../components/IconBadge'
 import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
-import { CEFR_LEVELS, FEATURE_COLORS, type CefrLevel, type Pattern } from '../../lib/types'
+import { CEFR_LEVELS, FEATURE_COLORS, type CefrLevel, type ExampleContext, type Pattern } from '../../lib/types'
+
+const CONTEXT_ICON: Record<ExampleContext, typeof Coffee> = {
+  everyday: Coffee,
+  professional: Briefcase,
+  storytelling: Feather,
+}
 
 export default function PatternsPage() {
   const patterns = useLiveQuery(() => db.patterns.toArray(), [])
@@ -105,21 +113,30 @@ function PatternDetail({ pattern, onBack }: { pattern: Pattern; onBack: () => vo
   )
   const [showRecognition, setShowRecognition] = useState(false)
 
+  const color = FEATURE_COLORS.patterns
+
   return (
-    <motion.div className="mx-auto max-w-2xl space-y-5" variants={staggerContainer} initial="hidden" animate="show">
+    <motion.div className="mx-auto max-w-3xl space-y-5" variants={staggerContainer} initial="hidden" animate="show">
       <motion.button variants={fadeUpItem} onClick={onBack} className="text-sm font-semibold text-[var(--text-muted)]">← All patterns</motion.button>
 
-      <motion.div variants={fadeUpItem}>
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-black">{pattern.name}</h1>
-          <span
-            className="rounded-full px-2 py-0.5 text-xs font-bold text-white"
-            style={{ background: FEATURE_COLORS.patterns }}
-          >
-            {pattern.level}
-          </span>
+      <motion.div
+        variants={fadeUpItem}
+        className="blob-decoration card flex items-center gap-3 p-4"
+        style={{ ['--blob-color' as string]: color, ['--blob-color-2' as string]: 'var(--blue)' }}
+      >
+        <div className="blob-content"><IconBadge icon={Blocks} color={color} size={44} /></div>
+        <div className="blob-content">
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-black">{pattern.name}</h1>
+            <span
+              className="rounded-full px-2 py-0.5 text-xs font-bold text-white"
+              style={{ background: color }}
+            >
+              {pattern.level}
+            </span>
+          </div>
+          <p className="text-sm font-medium text-[var(--text-muted)]">{pattern.category}</p>
         </div>
-        <p className="text-sm font-medium text-[var(--text-muted)]">{pattern.category}</p>
       </motion.div>
 
       <motion.section variants={fadeUpItem} className="card p-4">
@@ -129,25 +146,36 @@ function PatternDetail({ pattern, onBack }: { pattern: Pattern; onBack: () => vo
 
       <motion.section variants={fadeUpItem} className="space-y-2">
         <h2 className="text-sm font-bold text-[var(--text-muted)]">Examples</h2>
-        {pattern.examples.map((ex, i) => (
-          <div key={i} className="card p-3">
-            <span className="mb-1 block text-[10px] uppercase tracking-wide text-[var(--text-muted)]">{ex.context}</span>
-            <p><PatternText segments={ex.segments} /></p>
-          </div>
-        ))}
+        <div className="grid gap-2 sm:grid-cols-2">
+          {pattern.examples.map((ex, i) => (
+            <div key={i} className="card flex items-start gap-2 p-2.5">
+              <IconBadge icon={CONTEXT_ICON[ex.context]} color={color} size={26} />
+              <div>
+                <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-[var(--text-muted)]">{ex.context}</span>
+                <p className="pull-quote text-sm" style={{ ['--quote-color' as string]: color }}><PatternText segments={ex.segments} /></p>
+              </div>
+            </div>
+          ))}
+        </div>
       </motion.section>
 
-      <motion.section variants={fadeUpItem} className="card space-y-3 p-4">
-        <div>
-          <h2 className="text-sm font-bold text-[var(--text-muted)]">Common mistake</h2>
+      <motion.div variants={fadeUpItem} className="grid gap-4 md:grid-cols-2">
+        <section className="card space-y-2 p-4">
+          <div className="flex items-center gap-2">
+            <IconBadge icon={AlertTriangle} color="var(--orange)" size={30} />
+            <h2 className="text-sm font-bold text-[var(--text-muted)]">Common mistake</h2>
+          </div>
           <p className="text-sm">{pattern.commonMistake}</p>
-        </div>
-        <div>
-          <h2 className="text-sm font-bold text-[var(--text-muted)]">Contrast — often confused with</h2>
+        </section>
+        <section className="card space-y-2 rounded-2xl p-4" style={{ background: 'var(--pink-soft)' }}>
+          <div className="flex items-center gap-2">
+            <IconBadge icon={ShieldAlert} color="var(--pink)" size={30} />
+            <h2 className="text-sm font-bold text-[var(--text-muted)]">Often confused with</h2>
+          </div>
           <p className="text-sm text-red-500 line-through decoration-red-400">{pattern.contrastWrong}</p>
           <p className="text-sm text-[var(--text-muted)]">{pattern.contrastNote}</p>
-        </div>
-      </motion.section>
+        </section>
+      </motion.div>
 
       <section className="flex flex-wrap gap-3">
         <Link to={`/drills?patternId=${pattern.id}`} className="btn px-4 py-2 text-sm text-white" style={{ background: FEATURE_COLORS.patterns }}>

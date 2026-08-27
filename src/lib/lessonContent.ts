@@ -1,3 +1,4 @@
+import { Clock, Hand, ShoppingBag, SpellCheck, type LucideIcon } from 'lucide-react'
 import type { DeckName, ExampleContext, LessonDifficulty, QuizQuestion } from './types'
 
 /** Minimum quiz score (0-100) required before a lesson-backed module can be
@@ -10,6 +11,8 @@ export interface LessonExample {
 }
 
 export interface LessonContent {
+  /** A themed icon shown next to the lesson title. */
+  icon: LucideIcon
   /** Self-labeled difficulty (independent of CEFR level) so the learner can
    * pick what feels right that day. */
   difficulty: LessonDifficulty
@@ -39,6 +42,7 @@ export interface LessonContent {
  * rest of the curriculum stays usable while more lessons are written. */
 export const LESSON_CONTENT: Record<string, LessonContent> = {
   'Basic Greetings': {
+    icon: Hand,
     difficulty: 'easy',
     guidedQuestion: 'Look at the examples below before reading anything else. Notice how "Nice to meet you" and "Take care" are used — what do you think determines when each greeting or goodbye is appropriate?',
     concept: [
@@ -102,6 +106,7 @@ export const LESSON_CONTENT: Record<string, LessonContent> = {
   },
 
   'Numbers, Dates & Time': {
+    icon: Clock,
     difficulty: 'medium',
     guidedQuestion: "Read the examples below first. Look closely at the small words right before each time expression — \"at half past two,\" \"for the twenty-third of March.\" What pattern do you notice about which little word (at/on/in) goes with which kind of time?",
     concept: [
@@ -155,6 +160,7 @@ export const LESSON_CONTENT: Record<string, LessonContent> = {
   },
 
   'Simple Present & To Be': {
+    icon: SpellCheck,
     difficulty: 'easy',
     guidedQuestion: 'Before reading the explanation, look at the examples below. Compare "I am," "She is," and "They are" — what changes, and what stays the same? What do you think decides which form to use?',
     concept: [
@@ -214,6 +220,7 @@ export const LESSON_CONTENT: Record<string, LessonContent> = {
   },
 
   'Everyday Survival Vocabulary': {
+    icon: ShoppingBag,
     difficulty: 'easy',
     guidedQuestion: '"Excuse me" appears in several examples below, in different situations. Look at when it\'s used — what do all of those situations have in common?',
     concept: [
