@@ -1,4 +1,4 @@
-import type { DeckName, ExampleContext, QuizQuestion } from './types'
+import type { DeckName, ExampleContext, LessonDifficulty, QuizQuestion } from './types'
 
 /** Minimum quiz score (0-100) required before a lesson-backed module can be
  * marked "done". */
@@ -10,8 +10,17 @@ export interface LessonExample {
 }
 
 export interface LessonContent {
-  /** Short paragraphs — a relatable example first, then the underlying
-   * rule, the way a good teacher would explain it. */
+  /** Self-labeled difficulty (independent of CEFR level) so the learner can
+   * pick what feels right that day. */
+  difficulty: LessonDifficulty
+  /** A short guided-discovery question shown alongside the examples,
+   * before the rule is revealed — prompts the learner to notice the
+   * pattern themselves first (British Council "guided discovery" method). */
+  guidedQuestion: string
+  /** Short paragraphs revealed only after the learner engages with the
+   * examples and guided question — confirmation of the rule, not the
+   * starting point. A relatable framing first, then the underlying rule,
+   * the way a good teacher would explain it. */
   concept: string[]
   examples: LessonExample[]
   commonMistakes: string[]
@@ -30,6 +39,8 @@ export interface LessonContent {
  * rest of the curriculum stays usable while more lessons are written. */
 export const LESSON_CONTENT: Record<string, LessonContent> = {
   'Basic Greetings': {
+    difficulty: 'easy',
+    guidedQuestion: 'Look at the examples below before reading anything else. Notice how "Nice to meet you" and "Take care" are used — what do you think determines when each greeting or goodbye is appropriate?',
     concept: [
       'Imagine walking into a coffee shop for the first time. The barista smiles and says, "Hi, how are you?" You freeze — do you actually answer the question, or is it just being friendly? In English, small greetings like this are less about literally asking how you feel and more about warmth. Learning to greet people naturally is your first real step into English conversation.',
       'English greetings change with the time of day: "good morning" before noon, "good afternoon" until evening, "good evening" after that — while "hi" and "hello" work any time, with "hi" being the more casual choice.',
@@ -91,6 +102,8 @@ export const LESSON_CONTENT: Record<string, LessonContent> = {
   },
 
   'Numbers, Dates & Time': {
+    difficulty: 'medium',
+    guidedQuestion: "Read the examples below first. Look closely at the small words right before each time expression — \"at half past two,\" \"for the twenty-third of March.\" What pattern do you notice about which little word (at/on/in) goes with which kind of time?",
     concept: [
       'Numbers and time can feel like "just memorization," but they\'re some of the most-used words in daily life — sharing your phone number, agreeing on a meeting time, or understanding a price all depend on them.',
       'For time, English usually says the hour first: "three thirty" for 3:30, or the more traditional "half past three." You\'ll also hear "quarter past" and "quarter to" for :15 and :45.',
@@ -142,6 +155,8 @@ export const LESSON_CONTENT: Record<string, LessonContent> = {
   },
 
   'Simple Present & To Be': {
+    difficulty: 'easy',
+    guidedQuestion: 'Before reading the explanation, look at the examples below. Compare "I am," "She is," and "They are" — what changes, and what stays the same? What do you think decides which form to use?',
     concept: [
       'The verb "to be" (am/is/are) is the most important verb in English — it\'s how you say who you are, how you feel, and what things are like: "I am tired," "She is a teacher," "They are ready."',
       'Unlike most verbs, "to be" doesn\'t need a helper word to make questions or negatives. You don\'t say "Do you is happy?" — you simply flip the order: "Are you happy?" and add "not" for the negative: "I am not happy."',
@@ -199,6 +214,8 @@ export const LESSON_CONTENT: Record<string, LessonContent> = {
   },
 
   'Everyday Survival Vocabulary': {
+    difficulty: 'easy',
+    guidedQuestion: '"Excuse me" appears in several examples below, in different situations. Look at when it\'s used — what do all of those situations have in common?',
     concept: [
       "This module is your emergency toolkit — the words you need the moment you land in an English-speaking place: ordering food, asking for directions, and shopping.",
       'The magic phrase "Excuse me" politely opens almost any request — to get someone\'s attention, ask a question, or squeeze past someone. Pair it with "please" and "thank you," and you\'ll sound polite in almost any situation.',

@@ -11,6 +11,7 @@ import type {
   RoadmapModule,
   ScenarioPrompt,
   TimerLog,
+  WordLookup,
 } from './types'
 
 export class EnglishMasteryDB extends Dexie {
@@ -25,6 +26,7 @@ export class EnglishMasteryDB extends Dexie {
   scenarioPrompts!: Table<ScenarioPrompt, string>
   drillAttempts!: Table<DrillAttempt, string>
   patterns!: Table<Pattern, string>
+  wordLookups!: Table<WordLookup, string>
 
   constructor() {
     super('english-mastery-db')
@@ -48,6 +50,9 @@ export class EnglishMasteryDB extends Dexie {
       scenarioPrompts: 'id, level, category',
       drillAttempts: 'id, date, confidence, patternId, createdAt',
       patterns: 'id, level, category',
+    })
+    this.version(3).stores({
+      wordLookups: 'word',
     })
   }
 }

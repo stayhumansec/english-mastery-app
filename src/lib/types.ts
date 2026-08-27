@@ -44,6 +44,23 @@ export const FEATURE_COLORS: Record<FeatureKey, string> = {
   settings: '#6b7280',
 }
 
+/** Self-selected difficulty, independent of CEFR level — so a learner can
+ * pick what feels right that day rather than being locked strictly to
+ * sequence (mirrors the BBC Learning English flexible-tagging approach). */
+export type LessonDifficulty = 'easy' | 'medium' | 'hard'
+
+export const DIFFICULTY_COLORS: Record<LessonDifficulty, string> = {
+  easy: '#22c55e',
+  medium: '#f59e0b',
+  hard: '#ef4444',
+}
+
+export const DIFFICULTY_LABELS: Record<LessonDifficulty, string> = {
+  easy: 'Easy',
+  medium: 'Medium',
+  hard: 'Hard',
+}
+
 export type ModuleStatus = 'not_started' | 'in_progress' | 'done'
 
 export interface RoadmapModule {
@@ -319,6 +336,32 @@ export interface QuizQuestionFill {
 }
 
 export type QuizQuestion = QuizQuestionMCQ | QuizQuestionFill
+
+/** A short, pre-written "mini story" for the Comprehensible Input starter
+ * library (LingQ-style): a handful of passages per level that deliberately
+ * reuse a small, recurring set of core vocabulary across the set, with a
+ * click-to-reveal glossary. Content lives in code (src/lib/miniStorySeed.ts),
+ * not the database — only per-word lookup state is persisted. */
+export interface MiniStory {
+  id: string
+  level: CefrLevel
+  difficulty: LessonDifficulty
+  title: string
+  text: string
+  /** Lowercase, punctuation-stripped word -> its meaning in this story. */
+  glossary: Record<string, string>
+}
+
+/** Tracks how many times the learner has clicked a given word across all
+ * mini stories, and whether they've already sent it to flashcards — so
+ * repeated exposure to the same word across passages is visible. Keyed by
+ * the lowercase word itself. */
+export interface WordLookup {
+  word: string
+  lookedUpCount: number
+  addedFlashcardId?: string
+  lastSeenAt: number
+}
 
 export interface WeeklyFocus {
   weekKey: string // ISO-ish "YYYY-Www"
