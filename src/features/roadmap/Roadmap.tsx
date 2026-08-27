@@ -12,7 +12,17 @@ import { useToast } from '../../components/motion/ToastProvider'
 import { staggerContainer, fadeUpItem } from '../../lib/motionPresets'
 import { LESSON_CONTENT, QUIZ_PASS_THRESHOLD } from '../../lib/lessonContent'
 import { patternsForModule } from '../../lib/weeklyFocus'
-import { CEFR_LEVELS, LEVEL_COLORS, type CefrLevel, type ModuleStatus, type Pattern, type RoadmapModule } from '../../lib/types'
+import {
+  CEFR_LEVELS,
+  DIFFICULTY_COLORS,
+  DIFFICULTY_LABELS,
+  LEVEL_COLORS,
+  type CefrLevel,
+  type LessonDifficulty,
+  type ModuleStatus,
+  type Pattern,
+  type RoadmapModule,
+} from '../../lib/types'
 import { Lock, Plus, Trash2 } from 'lucide-react'
 
 const STATUS_LABEL: Record<ModuleStatus, string> = {
@@ -56,6 +66,7 @@ export default function Roadmap() {
     const prevModule = idx > 0 ? levelModules[idx - 1] : null
     return (
       <LessonView
+        key={lessonModule.id}
         module={lessonModule}
         prevModule={prevModule}
         patterns={patterns ?? []}
@@ -162,6 +173,7 @@ export default function Roadmap() {
                     locked={!prevDone}
                     recommendedAfter={i > 0 ? levelModules[i - 1].title : undefined}
                     hasLesson={!!LESSON_CONTENT[mod.title]}
+                    difficulty={LESSON_CONTENT[mod.title]?.difficulty}
                     onOpen={() => openLesson(mod.id)}
                     onUpdate={(patch) => updateModule(mod.id, patch)}
                     onDelete={() => deleteModule(mod.id)}
@@ -221,6 +233,7 @@ function ModuleRow({
   locked,
   recommendedAfter,
   hasLesson,
+  difficulty,
   onOpen,
   onUpdate,
   onDelete,
@@ -231,6 +244,7 @@ function ModuleRow({
   locked: boolean
   recommendedAfter?: string
   hasLesson: boolean
+  difficulty?: LessonDifficulty
   onOpen: () => void
   onUpdate: (patch: Partial<RoadmapModule>) => void
   onDelete: () => void
@@ -254,6 +268,14 @@ function ModuleRow({
             {mod.title}
           </span>
           {hasLesson && <span className="ml-2 text-xs font-bold" style={{ color }}>Lesson →</span>}
+          {difficulty && (
+            <span
+              className="ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-bold text-white"
+              style={{ background: DIFFICULTY_COLORS[difficulty] }}
+            >
+              {DIFFICULTY_LABELS[difficulty]}
+            </span>
+          )}
         </button>
         {hasLesson ? (
           <span
@@ -330,6 +352,7 @@ function LessonView({
   const lesson = LESSON_CONTENT[mod.title]
   const locked = !!prevModule && prevModule.status !== 'done'
   const [burst, setBurst] = useState(0)
+  const [ruleRevealed, setRuleRevealed] = useState(false)
   const { showToast } = useToast()
 
   useEffect(() => {
@@ -363,6 +386,14 @@ function LessonView({
           <span className="rounded-full px-2 py-0.5 text-xs font-bold text-white" style={{ background: color }}>
             {mod.level}
           </span>
+          {lesson && (
+            <span
+              className="rounded-full px-2 py-0.5 text-xs font-bold text-white"
+              style={{ background: DIFFICULTY_COLORS[lesson.difficulty] }}
+            >
+              {DIFFICULTY_LABELS[lesson.difficulty]}
+            </span>
+          )}
           {locked && (
             <span className="flex items-center gap-1 text-xs font-semibold text-[var(--text-muted)]">
               <Lock size={12} /> Recommended after "{prevModule!.title}"
@@ -407,15 +438,11 @@ function LessonView({
 
       {lesson && (
         <>
-          <motion.section variants={fadeUpItem} className="card space-y-2 p-4">
-            <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color }}>Concept</h2>
-            {lesson.concept.map((para, i) => (
-              <p key={i} className="text-sm leading-relaxed">{para}</p>
-            ))}
-          </motion.section>
-
           <motion.section variants={fadeUpItem} className="space-y-2">
-            <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color }}>Examples</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color }}>First, notice the pattern</h2>
+            <p className="text-xs text-[var(--text-muted)]">
+              Read these examples before the rule is explained — see what you can figure out yourself.
+            </p>
             {lesson.examples.map((ex, i) => (
               <div key={i} className="card p-3">
                 <span className="mb-1 block text-[10px] uppercase tracking-wide text-[var(--text-muted)]">{ex.context}</span>
@@ -423,6 +450,29 @@ function LessonView({
               </div>
             ))}
           </motion.section>
+
+          <motion.section variants={fadeUpItem} className="card space-y-3 p-4" style={{ background: 'var(--blue-soft)' }}>
+            <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color: 'var(--blue)' }}>Think about it</h2>
+            <p className="text-sm font-semibold">{lesson.guidedQuestion}</p>
+            {!ruleRevealed && (
+              <button onClick={() => setRuleRevealed(true)} className="btn px-4 py-1.5 text-sm text-white" style={{ background: 'var(--blue)' }}>
+                Reveal the rule
+              </button>
+            )}
+          </motion.section>
+
+          {ruleRevealed && (
+            <motion.section
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="card space-y-2 p-4"
+            >
+              <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color }}>The rule</h2>
+              {lesson.concept.map((para, i) => (
+                <p key={i} className="text-sm leading-relaxed">{para}</p>
+              ))}
+            </motion.section>
+          )}
 
           <motion.section variants={fadeUpItem} className="card space-y-2 p-4" style={{ background: 'var(--orange-soft)' }}>
             <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color: 'var(--orange)' }}>Watch out for this</h2>
