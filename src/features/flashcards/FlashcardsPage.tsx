@@ -81,7 +81,7 @@ export default function FlashcardsPage() {
         Prioritize high-frequency words when studying
       </motion.label>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {DECKS.map((deck) => {
           const color = DECK_COLORS[deck]
           const deckCards = cards.filter((c) => c.deck === deck)
@@ -91,28 +91,28 @@ export default function FlashcardsPage() {
             <motion.div
               key={deck}
               variants={fadeUpItem}
-              className="card space-y-2 p-4"
-              style={{ borderLeft: `6px solid ${color}` }}
+              className="card flex flex-col gap-2 p-4"
+              style={{ borderTop: `6px solid ${color}` }}
             >
               <div className="flex items-center gap-2">
                 <Layers size={18} style={{ color }} />
-                <h2 className="font-bold">{deck}</h2>
+                <h2 className="section-header text-sm leading-tight">{deck}</h2>
               </div>
-              <div className="flex gap-4 text-xs font-semibold text-[var(--text-muted)]">
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-[var(--text-muted)]">
                 <span>{deckCards.length} total</span>
                 <span>{due} due</span>
                 <span>{mastered} mastered</span>
               </div>
-              <div className="flex gap-2 pt-1">
+              <div className="mt-auto flex flex-col gap-2 pt-2">
                 <button
                   disabled={due === 0}
                   onClick={() => setStudyDeck(deck)}
-                  className="btn px-3 py-1.5 text-xs text-white disabled:opacity-40"
+                  className="btn w-full py-1.5 text-xs text-white disabled:opacity-40"
                   style={{ background: color }}
                 >
                   Study ({due})
                 </button>
-                <button onClick={() => setManagingDeck(deck)} className="btn btn-secondary px-3 py-1.5 text-xs">
+                <button onClick={() => setManagingDeck(deck)} className="btn btn-secondary w-full py-1.5 text-xs">
                   Manage cards
                 </button>
               </div>
@@ -309,25 +309,33 @@ function ManageDeck({
         ))}
       </div>
 
-      <div className="space-y-2">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {visibleCards.map((c) => (
-          <div key={c.id} className="card flex items-center justify-between p-3">
-            <div>
-              <p className="font-bold">{c.front}</p>
-              <p className="text-sm text-[var(--text-muted)]">{c.back}</p>
-              {c.frequencyTier && <p className="meta-label mt-1">{FREQUENCY_TIER_LABELS[c.frequencyTier]}</p>}
+          <div key={c.id} className="card flex flex-col gap-1.5 p-3">
+            <div className="flex items-start justify-between gap-2">
+              <p className="font-bold leading-tight">{c.front}</p>
+              <div className="flex shrink-0 gap-1">
+                <button onClick={() => setEditing(c)} className="text-[var(--text-muted)] hover:text-[var(--text)]">
+                  <Pencil size={14} />
+                </button>
+                <button onClick={() => remove(c.id)} className="text-[var(--text-muted)] hover:text-red-500">
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => setEditing(c)} className="text-[var(--text-muted)] hover:text-[var(--text)]">
-                <Pencil size={16} />
-              </button>
-              <button onClick={() => remove(c.id)} className="text-[var(--text-muted)] hover:text-red-500">
-                <Trash2 size={16} />
-              </button>
-            </div>
+            <p className="text-sm text-[var(--text-muted)]">{c.back}</p>
+            {c.frequencyTier && <p className="meta-label mt-auto pt-1">{FREQUENCY_TIER_LABELS[c.frequencyTier]}</p>}
           </div>
         ))}
-        {visibleCards.length === 0 && <p className="text-sm text-[var(--text-muted)]">No cards match this filter.</p>}
+        <button
+          onClick={() => setEditing('new')}
+          className="flex min-h-[88px] flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed p-3 text-sm font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--text)]"
+          style={{ borderColor: 'var(--border)' }}
+        >
+          <Plus size={18} />
+          Add card
+        </button>
+        {visibleCards.length === 0 && <p className="col-span-full text-sm text-[var(--text-muted)]">No cards match this filter.</p>}
       </div>
     </div>
   )

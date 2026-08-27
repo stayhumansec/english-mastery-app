@@ -258,30 +258,32 @@ export default function DrillsPage() {
       )}
 
       <motion.section variants={fadeUpItem} className="space-y-2">
-        <h2 className="font-bold">Past attempts</h2>
+        <h2 className="section-header text-sm">Past attempts</h2>
         {attempts?.length === 0 && <p className="text-sm text-[var(--text-muted)]">✨ No attempts yet — start a session above!</p>}
-        {attempts?.map((a) => (
-          <div key={a.id} className="card space-y-1 p-3 text-sm">
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-xs text-[var(--text-muted)]">
-                {a.date} · {patterns?.find((p) => p.id === a.patternId)?.name ?? 'general'}
-              </p>
-              <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] ${
-                  a.confidence === 'unsure' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
-                }`}
-              >
-                {a.confidence}
-              </span>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {attempts?.map((a) => (
+            <div key={a.id} className="card flex flex-col gap-1.5 p-3 text-sm">
+              <div className="flex items-start justify-between gap-2">
+                <p className="meta-label">
+                  {a.date} · {patterns?.find((p) => p.id === a.patternId)?.name ?? 'general'}
+                </p>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] ${
+                    a.confidence === 'unsure' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                  }`}
+                >
+                  {a.confidence}
+                </span>
+              </div>
+              <p className="flex-1">{a.sentence}</p>
+              {a.confidence === 'unsure' && (
+                <button onClick={() => markConfident(a)} className="text-xs font-bold hover:underline" style={{ color }}>
+                  Mark confident now
+                </button>
+              )}
             </div>
-            <p>{a.sentence}</p>
-            {a.confidence === 'unsure' && (
-              <button onClick={() => markConfident(a)} className="text-xs font-bold hover:underline" style={{ color }}>
-                Mark confident now
-              </button>
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
       </motion.section>
     </motion.div>
   )

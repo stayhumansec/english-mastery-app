@@ -129,23 +129,23 @@ export default function PatternsPage() {
         </select>
       </motion.div>
 
-      <motion.div variants={fadeUpItem} className="grid gap-2 sm:grid-cols-2">
+      <motion.div variants={fadeUpItem} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filtered.map((p) => (
           <button
             key={p.id}
             onClick={() => setSelected(p)}
-            className="card space-y-1 p-3 text-left transition-colors"
-            style={{ borderLeft: `6px solid ${FEATURE_COLORS.patterns}` }}
+            className="card flex flex-col gap-1.5 p-3 text-left transition-colors"
+            style={{ borderTop: `6px solid ${FEATURE_COLORS.patterns}` }}
           >
-            <div className="flex items-center justify-between">
-              <span className="font-bold">{p.name}</span>
-              <span className="text-xs font-semibold text-[var(--text-muted)]">{p.level}</span>
+            <div className="flex items-start justify-between gap-2">
+              <span className="section-header text-sm leading-tight">{p.name}</span>
+              <span className="shrink-0 text-xs font-semibold text-[var(--text-muted)]">{p.level}</span>
             </div>
-            <p className="text-xs text-[var(--text-muted)]">{p.category}</p>
-            <PatternText segments={p.structureTemplate} />
+            <p className="meta-label">{p.category}</p>
+            <p className="mt-auto pt-1 text-sm"><PatternText segments={p.structureTemplate} /></p>
           </button>
         ))}
-        {filtered.length === 0 && <p className="text-sm text-[var(--text-muted)]">🔍 No patterns match — try a different search or filter.</p>}
+        {filtered.length === 0 && <p className="col-span-full text-sm text-[var(--text-muted)]">🔍 No patterns match — try a different search or filter.</p>}
       </motion.div>
     </motion.div>
   )

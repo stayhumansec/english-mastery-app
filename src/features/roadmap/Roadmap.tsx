@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { motion } from 'framer-motion'
@@ -32,6 +32,7 @@ import {
 import {
   AlertTriangle,
   Briefcase,
+  Check,
   Coffee,
   Feather,
   GraduationCap,
@@ -39,6 +40,8 @@ import {
   Lock,
   Map,
   Plus,
+  Settings2,
+  Star,
   Trash2,
 } from 'lucide-react'
 import IconBadge from '../../components/IconBadge'
@@ -72,6 +75,26 @@ export default function Roadmap() {
 
   const lessonModuleId = searchParams.get('lesson')
   const refreshModuleId = searchParams.get('refresh')
+
+  // The current/next actionable module, auto-scrolled into view on load so
+  // the path opens where the learner left off rather than at the top.
+  const nextModuleId = useMemo(() => {
+    if (!modules) return null
+    for (const level of CEFR_LEVELS) {
+      const levelModules = modules.filter((m) => m.level === level).sort((a, b) => a.order - b.order)
+      const next = levelModules.find((m) => m.status !== 'done')
+      if (next) return next.id
+    }
+    return null
+  }, [modules])
+
+  useEffect(() => {
+    if (!nextModuleId) return
+    const t = window.setTimeout(() => {
+      document.getElementById(`roadmap-node-${nextModuleId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 350)
+    return () => window.clearTimeout(t)
+  }, [nextModuleId])
 
   if (!modules) return <p className="text-sm text-[var(--text-muted)]">Loading…</p>
 
@@ -163,14 +186,15 @@ export default function Roadmap() {
           .filter((m) => m.level === level)
           .sort((a, b) => a.order - b.order)
         const color = LEVEL_COLORS[level]
+        const pct = levelProgress(levelModules)
         return (
           <motion.section
             key={level}
             variants={fadeUpItem}
-            className="card p-4"
-            style={{ borderLeft: `6px solid ${color}` }}
+            className="rounded-3xl p-4 md:p-6"
+            style={{ background: `color-mix(in srgb, ${color} 6%, var(--surface))` }}
           >
-            <div className="mb-2 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span
                   className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-black text-white"
@@ -178,7 +202,7 @@ export default function Roadmap() {
                 >
                   {level}
                 </span>
-                <h2 className="font-bold">Level {level}</h2>
+                <h2 className="section-header">Level {level}</h2>
               </div>
               <button
                 onClick={() => setAddingFor(level)}
@@ -188,45 +212,247 @@ export default function Roadmap() {
                 <Plus size={14} /> Add module
               </button>
             </div>
-            <div className="mb-3 max-w-sm">
-              <ProgressBar value={levelProgress(levelModules)} color={color} thick />
-            </div>
 
             {addingFor === level && (
-              <AddModuleForm
-                onCancel={() => setAddingFor(null)}
-                onSubmit={(title) => addModule(level, title)}
-                color={color}
-              />
+              <div className="mb-4">
+                <AddModuleForm
+                  onCancel={() => setAddingFor(null)}
+                  onSubmit={(title) => addModule(level, title)}
+                  color={color}
+                />
+              </div>
             )}
 
-            <div className="space-y-2">
-              {levelModules.map((mod, i) => {
-                const prevDone = i === 0 || levelModules[i - 1].status === 'done'
-                return (
-                  <ModuleRow
-                    key={mod.id}
-                    mod={mod}
-                    color={color}
-                    locked={!prevDone}
-                    recommendedAfter={i > 0 ? levelModules[i - 1].title : undefined}
-                    hasLesson={!!LESSON_CONTENT[mod.title]}
-                    difficulty={LESSON_CONTENT[mod.title]?.difficulty}
-                    onOpen={() => openLesson(mod.id)}
-                    onUpdate={(patch) => updateModule(mod.id, patch)}
-                    onDelete={() => deleteModule(mod.id)}
-                    onMove={(dir) => moveModule(mod, dir)}
-                  />
-                )
-              })}
-              {levelModules.length === 0 && (
-                <p className="text-sm text-[var(--text-muted)]">No modules yet — add your first one above!</p>
-              )}
-            </div>
+            {levelModules.length === 0 ? (
+              <p className="text-sm text-[var(--text-muted)]">No modules yet — add your first one above!</p>
+            ) : (
+              <div className="grid gap-6 lg:grid-cols-[1fr_240px]">
+                <LevelPath
+                  levelModules={levelModules}
+                  color={color}
+                  onOpen={openLesson}
+                  onUpdate={updateModule}
+                  onDelete={deleteModule}
+                  onMove={moveModule}
+                />
+                <aside className="hidden lg:block">
+                  <div className="sticky top-4 card space-y-3 p-4">
+                    <p className="meta-label" style={{ color }}>This level</p>
+                    <p className="text-2xl font-black">{Math.round(pct)}%</p>
+                    <ProgressBar value={pct} color={color} thick />
+                    <p className="body-text text-sm text-[var(--text-muted)]">
+                      {levelModules.length} module{levelModules.length === 1 ? '' : 's'} · {levelModules.filter((m) => m.status === 'done').length} done
+                    </p>
+                    <p className="body-text text-sm text-[var(--text-muted)]">{levelBlurb(pct)}</p>
+                  </div>
+                </aside>
+              </div>
+            )}
           </motion.section>
         )
       })}
     </motion.div>
+  )
+}
+
+function levelBlurb(pct: number): string {
+  if (pct >= 100) return 'Level complete — nice work! 🎉'
+  if (pct >= 50) return "You're over halfway through this level."
+  if (pct > 0) return 'Good start — keep the momentum going.'
+  return 'Ready when you are — tap a node below to begin.'
+}
+
+/** Duolingo-style winding path: nodes alternate left/right down a smooth
+ * connecting line instead of a stacked list of full-width rows. Clicking a
+ * node opens the lesson exactly as before; a small gear toggles the same
+ * reorder/notes/delete controls the old row had, shown as a detail card
+ * beneath the path so no functionality is lost. */
+function LevelPath({
+  levelModules,
+  color,
+  onOpen,
+  onUpdate,
+  onDelete,
+  onMove,
+}: {
+  levelModules: RoadmapModule[]
+  color: string
+  onOpen: (id: string) => void
+  onUpdate: (id: string, patch: Partial<RoadmapModule>) => void
+  onDelete: (id: string) => void
+  onMove: (mod: RoadmapModule, dir: -1 | 1) => void
+}) {
+  const [tipId, setTipId] = useState<string | null>(null)
+  const [managingId, setManagingId] = useState<string | null>(null)
+
+  const rowHeight = 122
+  const nodeSize = 60
+  const xLeft = 24
+  const xRight = 76
+  const height = levelModules.length * rowHeight + 20
+
+  const points = levelModules.map((_, i) => ({
+    x: i % 2 === 0 ? xLeft : xRight,
+    y: i * rowHeight + rowHeight / 2 + 10,
+  }))
+
+  let pathD = ''
+  if (points.length > 0) {
+    pathD = `M ${points[0].x} ${points[0].y}`
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1]
+      const curr = points[i]
+      const midY = (prev.y + curr.y) / 2
+      pathD += ` C ${prev.x} ${midY}, ${curr.x} ${midY}, ${curr.x} ${curr.y}`
+    }
+  }
+
+  const managingMod = managingId ? levelModules.find((m) => m.id === managingId) : null
+  const managingIdx = managingMod ? levelModules.findIndex((m) => m.id === managingMod.id) : -1
+
+  return (
+    <div>
+      <div className="relative mx-auto w-full max-w-md" style={{ height }}>
+        <svg
+          className="absolute inset-0 h-full w-full"
+          viewBox={`0 0 100 ${height}`}
+          preserveAspectRatio="none"
+          aria-hidden
+        >
+          <path d={pathD} fill="none" stroke={color} strokeWidth={2} strokeDasharray="6 8" opacity={0.4} />
+        </svg>
+
+        {levelModules.map((mod, i) => {
+          const prevDone = i === 0 || levelModules[i - 1].status === 'done'
+          const locked = !prevDone
+          const point = points[i]
+          const alignRight = point.x > 50
+          return (
+            <div
+              key={mod.id}
+              id={`roadmap-node-${mod.id}`}
+              className="absolute flex flex-col items-center"
+              style={{
+                left: `${point.x}%`,
+                top: point.y,
+                transform: 'translate(-50%, -50%)',
+                width: 150,
+              }}
+            >
+              <PathNode
+                mod={mod}
+                color={color}
+                locked={locked}
+                size={nodeSize}
+                onOpen={() => (locked ? setTipId((t) => (t === mod.id ? null : mod.id)) : onOpen(mod.id))}
+              />
+              <div className={`mt-1.5 flex flex-col items-center gap-0.5 text-center ${alignRight ? '' : ''}`}>
+                <span className={`text-xs font-bold leading-tight ${mod.status === 'done' ? 'text-[var(--text-muted)] line-through' : ''}`}>
+                  {mod.title}
+                </span>
+                {!!LESSON_CONTENT[mod.title]?.difficulty && (
+                  <span
+                    className="rounded-full px-1.5 py-0.5 text-[9px] font-bold text-white"
+                    style={{ background: DIFFICULTY_COLORS[LESSON_CONTENT[mod.title].difficulty] }}
+                  >
+                    {DIFFICULTY_LABELS[LESSON_CONTENT[mod.title].difficulty]}
+                  </span>
+                )}
+                <button
+                  onClick={() => setManagingId((m) => (m === mod.id ? null : mod.id))}
+                  className="mt-0.5 flex items-center gap-1 text-[10px] font-semibold text-[var(--text-muted)] hover:text-[var(--text)]"
+                >
+                  <Settings2 size={11} /> Manage
+                </button>
+                {tipId === mod.id && locked && i > 0 && (
+                  <span className="mt-1 max-w-[150px] rounded-lg bg-[var(--text)] px-2 py-1 text-[10px] font-semibold text-white">
+                    Recommended after "{levelModules[i - 1].title}"
+                  </span>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {managingMod && (
+        <div className="mt-4">
+          <p className="meta-label mb-1" style={{ color }}>Managing</p>
+          <ModuleRow
+            mod={managingMod}
+            color={color}
+            locked={managingIdx > 0 && levelModules[managingIdx - 1].status !== 'done'}
+            recommendedAfter={managingIdx > 0 ? levelModules[managingIdx - 1].title : undefined}
+            hasLesson={!!LESSON_CONTENT[managingMod.title]}
+            difficulty={LESSON_CONTENT[managingMod.title]?.difficulty}
+            onOpen={() => onOpen(managingMod.id)}
+            onUpdate={(patch) => onUpdate(managingMod.id, patch)}
+            onDelete={() => {
+              onDelete(managingMod.id)
+              setManagingId(null)
+            }}
+            onMove={(dir) => onMove(managingMod, dir)}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PathNode({
+  mod,
+  color,
+  locked,
+  size,
+  onOpen,
+}: {
+  mod: RoadmapModule
+  color: string
+  locked: boolean
+  size: number
+  onOpen: () => void
+}) {
+  const done = mod.status === 'done'
+  const inProgress = mod.status === 'in_progress'
+
+  const style: CSSProperties = { width: size, height: size }
+  if (locked) {
+    style.background = 'var(--surface-alt)'
+    style.border = '3px solid var(--border)'
+  } else if (done) {
+    style.background = color
+    style.boxShadow = `0 0 0 4px color-mix(in srgb, ${color} 25%, transparent), 0 6px 16px -4px ${color}99`
+  } else if (inProgress) {
+    style.background = `conic-gradient(${color} 0deg 200deg, color-mix(in srgb, ${color} 18%, var(--surface)) 200deg 360deg)`
+    style.boxShadow = `0 4px 10px -3px ${color}66`
+  } else {
+    style.background = 'var(--surface)'
+    style.border = `3px solid ${color}`
+  }
+
+  return (
+    <button
+      onClick={onOpen}
+      className="relative flex shrink-0 items-center justify-center rounded-full transition-transform hover:scale-105"
+      style={style}
+      disabled={false}
+    >
+      {locked && <Lock size={Math.round(size * 0.34)} color="var(--text-muted)" />}
+      {!locked && done && <Check size={Math.round(size * 0.42)} color="white" strokeWidth={3} />}
+      {!locked && inProgress && (
+        <span className="flex h-[70%] w-[70%] items-center justify-center rounded-full" style={{ background: 'var(--surface)' }}>
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
+        </span>
+      )}
+      {!locked && !done && !inProgress && (
+        <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
+      )}
+      {!locked && done && (
+        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full" style={{ background: 'var(--yellow)' }}>
+          <Star size={11} color="white" fill="white" />
+        </span>
+      )}
+    </button>
   )
 }
 
