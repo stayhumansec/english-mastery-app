@@ -8,15 +8,20 @@ backend, no accounts, and no cloud sync.
 ## Features
 
 - **CEFR Roadmap** — an editable A1→C2 curriculum tracker. Modules with
-  written lesson content (all of A1 so far) open into a full guided lesson:
-  a plain-language concept explanation, tagged examples, a "watch out for
-  this" mistakes list, in-context practice (linked flashcards, a Sentence
+  written lesson content (all of A1 so far) open into a full guided lesson
+  using **guided discovery** (British Council method): examples come first
+  under "notice the pattern," then a guided question, with the rule itself
+  gated behind a "Reveal the rule" button rather than stated upfront. Each
+  lesson also has a plain-language rule explanation, a "watch out for this"
+  mistakes list, in-context practice (linked flashcards, a Sentence
   Production Drill, an embedded Spot the Pattern warm-up), and a mini-quiz —
   a lesson-backed module can only be marked done after passing its quiz
-  (70%+). Modules within a level are lightly sequenced, with a "recommended
-  after X" indicator. Modules without lesson content yet fall back to a
-  "coming soon" shell with the original manual status dropdown. Per-level
-  and overall progress bars throughout.
+  (70%+). Lessons carry a self-labeled Easy/Medium/Hard difficulty tag
+  (independent of CEFR level, BBC-style) alongside the level badge. Modules
+  within a level are lightly sequenced, with a "recommended after X"
+  indicator. Modules without lesson content yet fall back to a "coming soon"
+  shell with the original manual status dropdown. Per-level and overall
+  progress bars throughout.
 - **Calendar** — month/week/day scheduling for study sessions, color-coded by
   activity type, with daily/weekday/weekly recurrence and one-tap completion.
 - **Study Timer** — a configurable hours + minutes timer with start / pause /
@@ -29,14 +34,21 @@ backend, no accounts, and no cloud sync.
 - **Comprehensible Input Log** — log what you read/listened to (title,
   type, difficulty, duration) with 2–3 new words/phrases per entry and a
   one-click "send to flashcards" so real input feeds spaced repetition.
-  Tracks weekly input minutes and a separate weekly streak.
+  Tracks weekly input minutes and a separate weekly streak. Includes a
+  **Starter Reading Library** (LingQ-style): 10 pre-written mini-stories
+  across A1–B1 built around one recurring character, deliberately reusing
+  a small, overlapping set of core vocabulary across passages. Unfamiliar
+  words are click-to-reveal (meaning + one-click add-to-flashcards), and a
+  "x/y words looked up" counter per story makes repeated exposure visible.
 - **Writing Journal** — a daily free-write with word count and streak
   tracking, optionally tagged with the grammar pattern or vocabulary you
   deliberately tried to use. Output practice, not grammar recognition.
 - **Speaking & Accent Log** — a leveled scenario-prompt generator
   (everyday/professional/storytelling/debate) with a simple practice timer
-  (no audio recorded), self-rating, notes, and category coverage so gaps in
-  speaking practice are visible.
+  (no audio recorded), self-rating, notes, category coverage so gaps in
+  speaking practice are visible, and a minimal-pairs reference (ship/sheep,
+  think/sink...) to self-monitor against while shadowing — the same sound
+  distinctions ELSA-style apps score automatically, just self-assessed.
 - **Sentence Production Drills** — short daily sessions (4 sentences):
   pairs a grammar pattern with a realistic scenario and asks for a
   free-written sentence. Attempts are marked confident/unsure; unsure ones
