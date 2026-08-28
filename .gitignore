@@ -25,3 +25,7 @@ dist-ssr
 
 # PWA dev cache
 dev-dist
+
+# Local Firebase config (copy .env.example -> .env and fill in)
+.env
+.env.local

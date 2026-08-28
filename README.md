@@ -1,9 +1,59 @@
 # English Mastery
 
-A personal, single-user web app for taking yourself from A1 (beginner) to C2
-(near-native) English, with a focus on practical usage and accent training.
-It's a local-first PWA — everything is stored in your browser, there's no
-backend, no accounts, and no cloud sync.
+A web app for taking yourself from A1 (beginner) to C2 (near-native)
+English, with a focus on practical usage and accent training. It's
+local-first — everything is stored in your browser via IndexedDB — with
+an optional Google account layer on top: sign in and your progress is
+also saved to your account so it follows you to another browser or
+device. Without Firebase configured (see below), the app runs exactly as
+a local-only PWA with no login required.
+
+## Accounts & Cloud Sync
+
+When Firebase is configured (see **Setting up Google Sign-In** below),
+signing in with Google unlocks:
+
+- Your own private account — every signed-in user's data is isolated by
+  Firestore security rules (`firestore.rules`); nobody else can read or
+  write it.
+- **Snapshot-based sync**, not live real-time sync: the whole local
+  database is saved as one document (the same shape as Settings' JSON
+  export/import) to `users/{uid}/backup/current` periodically, when the
+  tab is hidden, on sign-out, and via a manual "Sync now" button in
+  Settings → Cloud Account. Signing in on a new device pulls down and
+  restores the most recent snapshot. If you edit offline on two devices
+  at once before either syncs, the last save wins — there's no field-level
+  merge.
+- A profile chip in the sidebar (photo/name + sign-out) and a Cloud
+  Account section in Settings (sync status + manual sync + sign-out).
+
+Without Firebase env vars set, none of this activates — no login gate,
+no sidebar chip, no Settings section — and the app behaves exactly like
+the original local-only build.
+
+### Setting up Google Sign-In
+
+1. Go to [console.firebase.google.com](https://console.firebase.google.com),
+   sign in, and **Add project**.
+2. **Build → Authentication → Get started** → enable the **Google**
+   provider.
+3. **Build → Firestore Database → Create database** → start in
+   **production mode**.
+4. In **Firestore Database → Rules**, paste the contents of
+   `firestore.rules` from this repo and **Publish** — this is what
+   actually enforces that each user can only access their own data.
+5. **Project settings → General → Your apps → Add app → Web (`</>`)** →
+   register it → copy the `firebaseConfig` values shown.
+6. For local development: `cp .env.example .env` and fill in the six
+   `VITE_FIREBASE_*` values from step 5.
+7. For the deployed site: add the same six values as repository secrets
+   (GitHub repo → **Settings → Secrets and variables → Actions → New
+   repository secret**) using the exact names from `.env.example` — the
+   `deploy-pages.yml` workflow reads them from there at build time.
+
+These config values are Firebase's public client identifiers, not
+secrets — they're safe to have in a public repo's build; the actual
+access control lives in `firestore.rules`.
 
 ## Navigation
 
@@ -133,6 +183,8 @@ preview → land on Home) shows once, on first launch.
   count-up numbers, spring-animated progress bars, the flashcard flip,
   confetti, toasts, modals — see `src/components/motion/`)
 - [Dexie.js](https://dexie.org) over IndexedDB for storage
+- [Firebase](https://firebase.google.com) (Auth + Firestore) for optional
+  Google Sign-In and cloud account sync — see Accounts & Cloud Sync above
 - [react-big-calendar](https://github.com/jquense/react-big-calendar) +
   `date-fns` for the calendar view
 - [react-router-dom](https://reactrouter.com) for client-side routing

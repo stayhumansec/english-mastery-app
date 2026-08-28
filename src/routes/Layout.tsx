@@ -1,9 +1,11 @@
 import { NavLink } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Home, Map, PenLine, Settings, Target, Trophy } from 'lucide-react'
+import { Home, LogOut, Map, PenLine, Settings, Target, Trophy } from 'lucide-react'
 import { FEATURE_COLORS, type FeatureKey } from '../lib/types'
 import PageTransition from '../components/motion/PageTransition'
 import IconBadge from '../components/IconBadge'
+import { useAuth } from '../features/auth/AuthProvider'
+import { saveBackupToCloud } from '../lib/cloudBackup'
 
 // Consolidated down to 6 primary destinations (Part 1 §1). Calendar stays
 // fully functional but is reached via a link from Home instead of a
@@ -18,6 +20,13 @@ const NAV_ITEMS: Array<{ to: string; label: string; icon: typeof Home; end?: boo
 ]
 
 export default function Layout() {
+  const { configured, user, signOutUser } = useAuth()
+
+  const handleSignOut = async () => {
+    if (user) await saveBackupToCloud(user.uid).catch(() => undefined)
+    await signOutUser()
+  }
+
   return (
     <div className="mx-auto flex min-h-screen max-w-6xl flex-col md:flex-row">
       <nav className="hidden shrink-0 flex-col gap-1 border-r border-[var(--border)] bg-[var(--surface)] p-4 md:flex md:w-56">
@@ -48,6 +57,24 @@ export default function Layout() {
             )}
           </NavLink>
         ))}
+
+        {configured && user && (
+          <div className="mt-auto flex items-center gap-2 rounded-xl border border-[var(--border)] p-2">
+            {user.photoURL ? (
+              <img src={user.photoURL} alt="" className="h-8 w-8 shrink-0 rounded-full" referrerPolicy="no-referrer" />
+            ) : (
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--accent-soft)] text-xs font-bold" style={{ color: 'var(--accent-dark)' }}>
+                {(user.displayName ?? user.email ?? '?').charAt(0).toUpperCase()}
+              </div>
+            )}
+            <span className="min-w-0 flex-1 truncate text-xs font-semibold text-[var(--text-muted)]">
+              {user.displayName ?? user.email}
+            </span>
+            <button onClick={handleSignOut} className="shrink-0 text-[var(--text-muted)] hover:text-red-500" title="Sign out">
+              <LogOut size={16} />
+            </button>
+          </div>
+        )}
       </nav>
 
       <main className="content-texture flex-1 px-4 pt-4 pb-20 md:px-8 md:pb-8">

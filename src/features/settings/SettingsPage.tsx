@@ -13,7 +13,9 @@ import {
   validateBackup,
 } from '../../lib/backup'
 import { FEATURE_COLORS, type AppSettings } from '../../lib/types'
-import { Download, Upload } from 'lucide-react'
+import { useAuth } from '../auth/AuthProvider'
+import { saveBackupToCloud } from '../../lib/cloudBackup'
+import { Download, LogOut, RefreshCw, Upload } from 'lucide-react'
 
 export default function SettingsPage() {
   const settings = useLiveQuery(() => db.settings.get('app'), [])
@@ -26,6 +28,28 @@ export default function SettingsPage() {
   const [pendingImport, setPendingImport] = useState<{ data: Awaited<ReturnType<typeof buildBackup>>; fileDate: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { showToast } = useToast()
+  const { configured, user, signOutUser } = useAuth()
+  const [syncing, setSyncing] = useState(false)
+  const [cloudSyncedAt, setCloudSyncedAt] = useState<Date | null>(null)
+
+  const syncNow = async () => {
+    if (!user) return
+    setSyncing(true)
+    try {
+      await saveBackupToCloud(user.uid)
+      setCloudSyncedAt(new Date())
+      showToast('Synced to your account!', '☁️')
+    } catch {
+      showToast("Couldn't sync — try again", '⚠️')
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  const handleSignOut = async () => {
+    if (user) await saveBackupToCloud(user.uid).catch(() => undefined)
+    await signOutUser()
+  }
 
   if (!settings) return <p className="text-sm text-[var(--text-muted)]">Loading…</p>
 
@@ -213,6 +237,42 @@ export default function SettingsPage() {
           />
         </label>
       </motion.section>
+
+      {configured && (
+        <motion.section variants={fadeUpItem} className="card space-y-3 p-4">
+          <h2 className="section-header text-sm">Cloud Account</h2>
+          {user ? (
+            <>
+              <div className="flex items-center gap-3">
+                {user.photoURL ? (
+                  <img src={user.photoURL} alt="" className="h-10 w-10 rounded-full" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-soft)] font-bold" style={{ color: 'var(--accent-dark)' }}>
+                    {(user.displayName ?? user.email ?? '?').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-bold">{user.displayName ?? 'Signed in'}</p>
+                  <p className="body-text text-xs text-[var(--text-muted)]">{user.email}</p>
+                </div>
+              </div>
+              <p className="body-text text-sm text-[var(--text-muted)]">
+                {cloudSyncedAt ? `Last synced: ${cloudSyncedAt.toLocaleTimeString()}` : 'Not synced yet this session.'}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={syncNow} disabled={syncing} className="btn btn-primary px-3 py-1.5 text-sm disabled:opacity-60">
+                  <RefreshCw size={14} /> {syncing ? 'Syncing…' : 'Sync now'}
+                </button>
+                <button onClick={handleSignOut} className="btn btn-secondary px-3 py-1.5 text-sm">
+                  <LogOut size={14} /> Sign out
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="body-text text-sm text-[var(--text-muted)]">Not signed in.</p>
+          )}
+        </motion.section>
+      )}
 
       <motion.section variants={fadeUpItem} className="card space-y-3 p-4">
         <h2 className="section-header text-sm">Backup & Restore</h2>
